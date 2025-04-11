@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblio Amigos - Gestor Escolar Offline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #e0f2fe; /* Fondo azul más claro general */
+            margin: 0; /* Asegurar que no haya margen por defecto */
+        }
+        /* --- Estilos Generales App --- */
+        .app-container th, .app-container td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #cceeff; vertical-align: middle; }
+        .app-container th { background-color: #e0f2fe; font-weight: 700; }
+        .app-container tr:nth-child(even) { background-color: #f8fafc; }
+        .app-container tr:hover { background-color: #e0f2fe; }
+        .btn { padding: 8px 14px; border-radius: 8px; font-weight: 700; transition: all 0.3s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-sm { padding: 6px 10px; font-size: 0.875rem; }
+        .btn-primary { background-color: #2563eb; color: white; } .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-secondary { background-color: #f59e0b; color: white; } .btn-secondary:hover { background-color: #d97706; }
+        .btn-danger { background-color: #dc2626; color: white; } .btn-danger:hover { background-color: #b91c1c; }
+        .btn-success { background-color: #16a34a; color: white; } .btn-success:hover { background-color: #15803d; }
+        .btn-edit { background-color: #6b7280; color: white; } .btn-edit:hover { background-color: #4b5563; }
+        .btn-export { background-color: #0d9488; color: white; } .btn-export:hover { background-color: #0f766e; }
+        .btn-extend { background-color: #a855f7; color: white; } .btn-extend:hover { background-color: #9333ea; }
+        .btn-logout { background-color: #ef4444; color: white; } .btn-logout:hover { background-color: #dc2626; }
+
+        /* Ocultar flechas en input number */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* Modal Edición Libro */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background-color: #fff; margin: auto; padding: 25px; border: 1px solid #ddd; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); position: relative; }
+        .close-button { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: #333; text-decoration: none; }
+
+        /* Iconos SVG */
+        .icon { width: 1.2em; height: 1.2em; vertical-align: -0.15em; display: inline-block; margin-right: 8px; }
+
+        /* --- Estilos App Layout --- */
+        .app-container { display: flex; min-height: 100vh; } /* Contenedor principal de la app (oculto al inicio) */
+        .sidebar { width: 240px; transition: transform 0.3s ease; background-color: #f0f9ff; /* Fondo sidebar */ }
+        .content-area { flex: 1; /* Ocupa el resto del espacio */ transition: margin-left 0.3s ease; background-color: #f8fafc; /* Fondo área contenido */ }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); position: fixed; z-index: 50; height: 100%; }
+            .sidebar.open { transform: translateX(0); }
+            .content-area { margin-left: 0; width: 100%; }
+            .menu-button { display: block; }
+        }
+        @media (min-width: 769px) { .menu-button { display: none; } }
+        .nav-link.active { background-color: #3b82f6; color: white; font-weight: 700; }
+        .nav-link { display: flex; align-items: center; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; color: #374151; transition: background-color 0.2s ease, color 0.2s ease; }
+        .nav-link:hover { background-color: #dbeafe; color: #1e40af; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+
+        /* --- Estilos Login Screen --- */
+        #login-screen {
+            display: flex; /* Visible por defecto */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6); /* Gradiente azul */
+        }
+        .login-box {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        .login-box h2 {
+            margin-bottom: 25px;
+            color: #1e3a8a; /* Azul oscuro */
+            font-size: 1.8rem;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border: 1px solid #d1d5db; /* Gris claro */
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+        }
+        #login-error {
+            color: #dc2626; /* Rojo */
+            margin-top: 15px;
+            font-size: 0.9rem;
+            min-height: 1.2em; /* Espacio para el mensaje */
+        }
+
+        /* Visibilidad basada en login/rol */
+        .logged-out #app-container { display: none; }
+        .logged-in #login-screen { display: none; }
+        .admin-only { display: none; } /* Oculto por defecto */
+        .is-admin .admin-only { display: list-item; } /* Mostrar para admin (o block/flex según elemento) */
+        .is-admin .admin-only-flex { display: flex; } /* Variante para flexbox */
+
+        /* Estilos específicos */
+        .reminder-card { background-color: #fffbeb; border-left: 4px solid #facc15; }
+        .history-table th { background-color: #f3f4f6; }
+        .users-table th { background-color: #f1f5f9; } /* Cabecera tabla usuarios */
+
+    </style>
+</head>
+<body class="logged-out"> <div id="login-screen">
+        <div class="login-box">
+            <h2>Biblio Amigos</h2>
+            <form id="login-form">
+                <div>
+                    <input type="text" id="username" placeholder="Usuario" required>
+                </div>
+                <div>
+                    <input type="password" id="password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+                <p id="login-error">&nbsp;</p> </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="app-container">
+
+        <button id="menu-toggle-btn" class="menu-button fixed top-4 left-4 z-50 p-2 bg-blue-500 text-white rounded-md shadow-lg md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+        </button>
+
+        <aside id="sidebar" class="sidebar fixed top-0 left-0 h-full bg-gradient-to-b from-sky-100 to-blue-100 p-6 shadow-lg overflow-y-auto z-40 flex flex-col">
+            <div>
+                 <h1 class="text-2xl font-bold mb-4 text-center text-blue-700 flex items-center justify-center gap-2">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5V19c1.45-1.1 3.55-1.5 5.5-1.5 1.17 0 2.39.15 3.5.5V5m-6.5 13.5V6.5c-1.45-1.1-3.55-1.5-5.5-1.5S5.45 5.4 4 6.5v12c1.45-1.1 3.55-1.5 5.5-1.5s4.05.4 5.5 1.5z"></path></svg>
+                    Biblio Amigos
+                </h1>
+                <p class="text-center text-sm text-gray-600 mb-6">Usuario: <strong id="logged-in-user"></strong></p>
+                <nav>
+                    <ul>
+                        <li><a href="#" class="nav-link active" data-section="library-section">... Biblioteca</a></li>
+                        <li><a href="#" class="nav-link" data-section="loans-section">... Préstamos Activos</a></li>
+                        <li><a href="#" class="nav-link" data-section="history-section">... Historial Préstamos</a></li>
+                        <li><a href="#" class="nav-link" data-section="add-book-section">... Añadir Libro</a></li>
+                        <li class="admin-only">
+                            <a href="#" class="nav-link" data-section="user-management-section">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+                                Gestionar Usuarios
+                            </a>
+                        </li>
+                        <li><a href="#" class="nav-link" data-section="export-section">... Exportar Datos</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="mt-auto pt-6">
+                 <button id="logout-btn" class="btn btn-logout w-full">
+                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path></svg>
+                     Cerrar Sesión
+                 </button>
+            </div>
+        </aside>
+
+        <main id="content-area" class="content-area p-6 md:p-10 flex-1 overflow-y-auto">
+
+            <section id="library-section" class="content-section active"> /* ... (contenido sin cambios) ... */ </section>
+            <section id="loans-section" class="content-section"> /* ... (contenido sin cambios) ... */ </section>
+            <section id="history-section" class="content-section"> /* ... (contenido sin cambios) ... */ </section>
+            <section id="add-book-section" class="content-section"> /* ... (contenido sin cambios) ... */ </section>
+
+            <section id="user-management-section" class="content-section admin-only-section">
+                 <div class="p-6 bg-white rounded-lg border border-purple-200 shadow-sm mb-8">
+                    <h2 class="text-2xl font-semibold mb-5 text-purple-700 flex items-center gap-2">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"></path></svg>
+                        Añadir Nuevo Usuario
+                    </h2>
+                    <form id="add-user-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="new-username" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario:</label>
+                            <input type="text" id="new-username" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña:</label>
+                            <input type="password" id="new-password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label for="new-role" class="block text-sm font-medium text-gray-700 mb-1">Rol:</label>
+                            <select id="new-role" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 bg-white">
+                                <option value="user">Usuario Normal</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-3 mt-2">
+                             <button type="submit" class="btn btn-primary w-full">Añadir Usuario</button>
+                        </div>
+                    </form>
+                     <div id="message-box-user-add" class="mt-4 p-3 rounded-lg border text-center hidden"></div>
+                 </div>
+
+                 <div class="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <h2 class="text-2xl font-semibold mb-5 text-gray-700">Usuarios Existentes</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white rounded-lg users-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Rol</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-list" class="text-sm">
+                                </tbody>
+                        </table>
+                    </div>
+                    <p id="no-users-message" class="text-center text-gray-500 mt-4 hidden">No hay otros usuarios definidos.</p>
+                 </div>
+            </section>
+
+            <section id="export-section" class="content-section"> /* ... (contenido sin cambios) ... */ </section>
+
+             <div id="message-box-general" class="fixed bottom-4 right-4 p-4 rounded-lg border shadow-lg text-center hidden z-50 max-w-sm"></div>
+
+             <footer class="mt-10 pt-6 border-t border-gray-200 text-center">
+                 <p class="text-xs text-gray-500">
+                     Creado por Javi Barrero
+                 </p>
+             </footer>
+             </main>
+
+        <div id="edit-modal" class="modal"> /* ... (contenido modal sin cambios) ... */ </div>
+
+    </div> <script>
+        // --- Lógica JavaScript para la Biblioteca Offline (v5 - Simulación Login) ---
+
+        // --- Constantes y Claves Storage ---
+        const LOAN_DURATION_DAYS = 14;
+        const STORAGE_KEY_BOOKS = 'libraryBooks_v5'; // Actualizar versión
+        const STORAGE_KEY_HISTORY = 'libraryLoanHistory_v5'; // Actualizar versión
+        const STORAGE_KEY_USERS = 'libraryUsers_v5'; // Nueva clave para usuarios
+        const SESSION_KEY_USER = 'libraryCurrentUser'; // Clave para sessionStorage
+
+        // --- Elementos del DOM (Nuevos y Actualizados) ---
+        const bodyElement = document.body;
+        const loginScreen = document.getElementById('login-screen');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('login-error');
+        const loggedInUserDisplay = document.getElementById('logged-in-user');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userManagementNavItem = document.querySelector('[data-section="user-management-section"]').closest('li'); // Para ocultar/mostrar
+        const addUserForm = document.getElementById('add-user-form');
+        const userListTableBody = document.getElementById('user-list');
+        const noUsersMessage = document.getElementById('no-users-message');
+        const messageBoxUserAdd = document.getElementById('message-box-user-add');
+
+        // Resto de elementos del DOM (sin cambios)
+        const sidebar = document.getElementById('sidebar');
+        const contentArea = document.getElementById('content-area');
+        const menuToggleBtn = document.getElementById('menu-toggle-btn');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contentSections = document.querySelectorAll('.content-section');
+        const bookForm = document.getElementById('add-book-form');
+        const libraryBookList = document.getElementById('book-list-library');
+        const loansBookList = document.getElementById('book-list-loans');
+        const historyList = document.getElementById('loan-history-list');
+        const remindersList = document.getElementById('reminders-list');
+        const librarySearchInput = document.getElementById('search-library');
+        const noBooksMessageLibrary = document.getElementById('no-books-message-library');
+        const noBooksMessageLoans = document.getElementById('no-books-message-loans');
+        const noHistoryMessage = document.getElementById('no-history-message');
+        const noRemindersMessage = document.getElementById('no-reminders-message');
+        const messageBoxAdd = document.getElementById('message-box-add');
+        const messageBoxExport = document.getElementById('message-box-export');
+        const messageBoxGeneral = document.getElementById('message-box-general');
+        const exportLibraryCsvBtn = document.getElementById('export-library-csv-btn');
+        const exportHistoryCsvBtn = document.getElementById('export-history-csv-btn');
+        const editModal = document.getElementById('edit-modal');
+        const editBookForm = document.getElementById('edit-book-form');
+        const editBookIndexInput = document.getElementById('edit-book-index');
+
+        // --- Iconos SVG (sin cambios) ---
+        const iconLend = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>`;
+        const iconReturn = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>`;
+        const iconEdit = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>`;
+        const iconDelete = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>`;
+        const iconExtend = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M15 2h-1.1L12 3.47 10.1 2H9v1.57l-1.4.93L6.39 4 5 5.39l.93 1.4L4.36 8H3v1.1l1.53.93L4 11.6l1.39 1.39.93-1.57H8v1.57l1.4.93L10.61 15 12 16.39l1.39-1.39.93 1.57H16v-1.57l1.4-.93L18.61 12 20 10.61l-.93-1.4L20.64 8H22V6.9l-1.53-.93L21 4.4l-1.39-1.39-.93 1.57H17V2h-2zm-3 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"></path></svg>`;
+        const iconDeleteUser = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>`;
+
+        // --- Estado Inicial y Autenticación ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        function initializeApp() {
+            // Comprobar si hay usuario en sessionStorage
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+                // Usuario ya logueado
+                showApp(currentUser);
+            } else {
+                // No logueado, mostrar pantalla login
+                showLoginScreen();
+            }
+            // Añadir listeners una sola vez
+            loginForm.addEventListener('submit', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            addUserForm.addEventListener('submit', handleAddUser);
+            // Listeners de la app principal (navegación, etc.)
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = link.getAttribute('data-section');
+                    navigateToSection(sectionId);
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            });
+            menuToggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+            librarySearchInput.addEventListener('input', displayBooksLibrary);
+            exportLibraryCsvBtn.addEventListener('click', () => exportToCSV('library'));
+            exportHistoryCsvBtn.addEventListener('click', () => exportToCSV('history'));
+            editBookForm.addEventListener('submit', handleEditBookSubmit);
+             window.onclick = function(event) {
+                 if (event.target == editModal) { closeEditModal(); }
+             }
+             bookForm.addEventListener('submit', handleAddBookSubmit);
+        }
+
+        function showLoginScreen() {
+            bodyElement.classList.remove('logged-in');
+            bodyElement.classList.add('logged-out');
+            usernameInput.value = '';
+            passwordInput.value = '';
+            loginError.textContent = '\u00A0'; // Espacio para mantener altura
+        }
+
+        function showApp(user) {
+            bodyElement.classList.remove('logged-out');
+            bodyElement.classList.add('logged-in');
+            loggedInUserDisplay.textContent = user.username;
+
+            // Ajustar UI según rol
+            if (user.role === 'admin') {
+                bodyElement.classList.add('is-admin');
+            } else {
+                bodyElement.classList.remove('is-admin');
+            }
+            // Navegar a la sección por defecto (Biblioteca)
+            navigateToSection('library-section');
+        }
+
+        function getCurrentUser() {
+            const userData = sessionStorage.getItem(SESSION_KEY_USER);
+            return userData ? JSON.parse(userData) : null;
+        }
+
+        function setCurrentUser(user) {
+            if (user) {
+                sessionStorage.setItem(SESSION_KEY_USER, JSON.stringify({ username: user.username, role: user.role }));
+            } else {
+                sessionStorage.removeItem(SESSION_KEY_USER);
+            }
+        }
+
+        // --- Lógica de Login/Logout ---
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            loginError.textContent = '\u00A0'; // Limpiar error
+
+            const users = getUsers();
+            const foundUser = users.find(user => user.username === username);
+
+            // *** ADVERTENCIA DE SEGURIDAD: Hashing simulado, NO SEGURO ***
+            // En una aplicación real, NUNCA hacer hashing ni comparación en cliente.
+            if (foundUser && pseudoHash(password) === foundUser.passwordHash) {
+                // Login exitoso
+                setCurrentUser(foundUser);
+                showApp(foundUser);
+            } else {
+                // Login fallido
+                loginError.textContent = 'Usuario o contraseña incorrectos.';
+            }
+        }
+
+        function handleLogout() {
+            setCurrentUser(null);
+            showLoginScreen();
+            // Opcional: recargar la página para un reinicio completo
+            // window.location.reload();
+        }
+
+        // --- Gestión de Usuarios (localStorage) ---
+
+        // *** ADVERTENCIA DE SEGURIDAD: Hashing simulado, NO SEGURO ***
+        function pseudoHash(password) {
+            // Esto NO es seguro, solo una ofuscación simple para el ejemplo.
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                hash = (hash << 5) - hash + password.charCodeAt(i);
+                hash |= 0; // Convertir a 32bit integer
+            }
+            // Añadir un "salt" simple (tampoco seguro así)
+            const salt = "BiblioAmigosSalt";
+            let saltedHash = 0;
+             for (let i = 0; i < (password + salt).length; i++) {
+                saltedHash = (saltedHash << 5) - saltedHash + (password + salt).charCodeAt(i);
+                saltedHash |= 0;
+            }
+            return saltedHash.toString(); // Devolver como string
+        }
+
+        function getUsers() {
+            const users = localStorage.getItem(STORAGE_KEY_USERS);
+            let parsedUsers = users ? JSON.parse(users) : [];
+
+            // Si no hay usuarios, crear admin por defecto
+            if (parsedUsers.length === 0) {
+                console.log("Creando usuario admin por defecto (admin/admin)");
+                parsedUsers.push({
+                    username: 'admin',
+                    // *** ADVERTENCIA: Guardando hash simulado ***
+                    passwordHash: pseudoHash('admin'), // Contraseña por defecto 'admin'
+                    role: 'admin'
+                });
+                saveUsers(parsedUsers);
+            }
+            return parsedUsers;
+        }
+
+        function saveUsers(users) {
+            try {
+                localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+            } catch (error) {
+                console.error("Error al guardar usuarios en localStorage:", error);
+                showMessage("Error: No se pudieron guardar los cambios de los usuarios.", "error");
+            }
+        }
+
+        // --- Lógica de Gestión de Usuarios (Admin) ---
+
+        function displayUsers() {
+            const users = getUsers();
+            const currentUser = getCurrentUser();
+            userListTableBody.innerHTML = ''; // Limpiar tabla
+
+            // Filtrar para no mostrar el usuario actual en la lista (opcional)
+            const usersToShow = users.filter(user => user.username !== currentUser?.username);
+
+            if (usersToShow.length === 0) {
+                noUsersMessage.classList.remove('hidden');
+            } else {
+                noUsersMessage.classList.add('hidden');
+                usersToShow.forEach((user, index) => {
+                     // Encontrar índice original si es necesario para borrar, aunque aquí borraremos por username
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td>${user.role === 'admin' ? 'Administrador' : 'Usuario Normal'}</td>
+                        <td>
+                            <button onclick="deleteUser('${user.username}')" class="btn btn-danger btn-sm">${iconDeleteUser} Borrar</button>
+                        </td>
+                    `;
+                    userListTableBody.appendChild(row);
+                });
+            }
+        }
+
+        function handleAddUser(e) {
+            e.preventDefault();
+            const newUsername = document.getElementById('new-username').value.trim();
+            const newPassword = document.getElementById('new-password').value;
+            const newRole = document.getElementById('new-role').value;
+            messageBoxUserAdd.textContent = '';
+            messageBoxUserAdd.classList.add('hidden');
+
+
+            if (!newUsername || !newPassword) {
+                 showUserAddMessage("Nombre de usuario y contraseña son obligatorios.", "error");
+                return;
+            }
+
+            const users = getUsers();
+            // Comprobar si el usuario ya existe
+            if (users.some(user => user.username === newUsername)) {
+                 showUserAddMessage(`El usuario "${newUsername}" ya existe.`, "error");
+                return;
+            }
+
+            // Añadir nuevo usuario
+            users.push({
+                username: newUsername,
+                passwordHash: pseudoHash(newPassword), // *** ADVERTENCIA: Hash simulado ***
+                role: newRole
+            });
+            saveUsers(users);
+            showUserAddMessage(`Usuario "${newUsername}" añadido correctamente.`, "success");
+            addUserForm.reset();
+            displayUsers(); // Refrescar lista
+        }
+
+        function deleteUser(usernameToDelete) {
+             if (usernameToDelete === 'admin') {
+                 showMessage("No se puede borrar el usuario 'admin' principal.", "error");
+                 return;
+             }
+             if (confirm(`¿Seguro que quieres borrar al usuario "${usernameToDelete}"? Esta acción no se puede deshacer.`)) {
+                 let users = getUsers();
+                 const initialLength = users.length;
+                 users = users.filter(user => user.username !== usernameToDelete);
+
+                 if (users.length < initialLength) {
+                     saveUsers(users);
+                     showMessage(`Usuario "${usernameToDelete}" borrado.`, "warning");
+                     displayUsers(); // Refrescar lista
+                 } else {
+                      showMessage(`No se encontró al usuario "${usernameToDelete}" para borrar.`, "error");
+                 }
+             }
+        }
+
+         // Mostrar mensaje específico en la sección de añadir usuario
+        function showUserAddMessage(text, type = 'success') {
+            messageBoxUserAdd.textContent = text;
+            messageBoxUserAdd.className = 'mt-4 p-3 rounded-lg border text-center'; // Reset
+
+            if (type === 'success') {
+                messageBoxUserAdd.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+            } else {
+                messageBoxUserAdd.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+            }
+            messageBoxUserAdd.classList.remove('hidden');
+             setTimeout(() => messageBoxUserAdd.classList.add('hidden'), 4000);
+        }
+
+
+        // --- Gestión de Libros y Préstamos (Adaptado para nueva estructura de datos) ---
+
+        // Funciones de Ayuda para Fechas (sin cambios)
+        function getTodayISO() { return new Date().toISOString().split('T')[0]; }
+        function addDays(isoDate, days) { const date = new Date(isoDate); date.setUTCHours(0,0,0,0); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().split('T')[0]; }
+        function formatDate(isoDate) { if (!isoDate) return '-'; try { const date = new Date(isoDate + 'T00:00:00Z'); if (isNaN(date.getTime())) return isoDate; const day = String(date.getUTCDate()).padStart(2, '0'); const month = String(date.getUTCMonth() + 1).padStart(2, '0'); const year = date.getUTCFullYear(); return `${day}/${month}/${year}`; } catch (e) { console.error("Error formateando fecha:", isoDate, e); return isoDate; } }
+
+        // Funciones de Visualización (Adaptadas)
+        function displayBooksLibrary() {
+             const books = getBooks();
+             const searchTerm = librarySearchInput.value.toLowerCase();
+             libraryBookList.innerHTML = '';
+             const filteredBooks = books.filter(book => book.title.toLowerCase().includes(searchTerm) || book.author.toLowerCase().includes(searchTerm) || (book.location && book.location.toLowerCase().includes(searchTerm)) || (book.category && book.category.toLowerCase().includes(searchTerm)));
+             noBooksMessageLibrary.classList.toggle('hidden', filteredBooks.length > 0);
+             if (filteredBooks.length === 0 && books.length > 0) noBooksMessageLibrary.textContent = "No encontré libros con esa búsqueda.";
+             else if (books.length === 0) noBooksMessageLibrary.textContent = "¡Ups! Todavía no hay libros aquí.";
+
+             books.forEach((book, index) => {
+                 if (!filteredBooks.includes(book)) return;
+                 const row = document.createElement('tr');
+                 let statusText = 'Disponible';
+                 let statusColor = 'text-green-600 font-semibold';
+                 if (book.status === 'prestado') { statusText = 'Prestado'; statusColor = 'text-orange-600 font-semibold'; row.classList.add('opacity-70'); }
+                 let actionButtons = '';
+                 if (book.status === 'disponible') actionButtons += `<button onclick="lendBook(${index})" class="btn btn-secondary btn-sm mr-1 mb-1">${iconLend} Prestar</button>`;
+                 actionButtons += `<button onclick="openEditModal(${index})" class="btn btn-edit btn-sm mr-1 mb-1">${iconEdit} Editar</button>`;
+                 actionButtons += `<button onclick="deleteBook(${index})" class="btn btn-danger btn-sm mb-1">${iconDelete} Borrar</button>`;
+                 row.innerHTML = `<td class="font-semibold">${book.title}</td><td>${book.author}</td><td>${book.category || '-'}</td><td>${book.location || '-'}</td><td class="${statusColor}">${statusText}</td><td>${book.loanedTo || '-'}</td><td>${actionButtons}</td>`;
+                 libraryBookList.appendChild(row);
+             });
+        }
+        function displayBooksLoans() {
+             const books = getBooks();
+             loansBookList.innerHTML = '';
+             const loanedBooks = books.filter(book => book.status === 'prestado');
+             noBooksMessageLoans.classList.toggle('hidden', loanedBooks.length > 0);
+             loanedBooks.forEach(book => {
+                 const originalIndex = books.findIndex(b => b === book);
+                 const row = document.createElement('tr');
+                 row.innerHTML = `<td class="font-semibold">${book.title}</td><td>${book.loanedTo}</td><td>${formatDate(book.loanDate)}</td><td>${formatDate(book.dueDate)}</td><td><button onclick="returnBook(${originalIndex})" class="btn btn-success btn-sm mr-1 mb-1">${iconReturn} Devolver</button><button onclick="extendLoan(${originalIndex})" class="btn btn-extend btn-sm mb-1">${iconExtend} Extender</button></td>`;
+                 loansBookList.appendChild(row);
+             });
+        }
+        function displayLoanHistory() {
+             const history = getLoanHistory();
+             historyList.innerHTML = '';
+             noHistoryMessage.classList.toggle('hidden', history.length > 0);
+             history.forEach(entry => {
+                 const row = document.createElement('tr');
+                 row.innerHTML = `<td>${entry.title}</td><td>${entry.author}</td><td>${entry.loanedTo}</td><td>${formatDate(entry.loanDate)}</td><td>${formatDate(entry.returnDate)}</td>`;
+                 historyList.appendChild(row);
+             });
+        }
+        function displayReminders() {
+             const books = getBooks();
+             remindersList.innerHTML = '';
+             const today = getTodayISO();
+             const tomorrow = addDays(today, 1);
+             const booksDueTomorrow = books.filter(book => book.status === 'prestado' && book.dueDate === tomorrow);
+             noRemindersMessage.classList.toggle('hidden', booksDueTomorrow.length > 0);
+             booksDueTomorrow.forEach(book => {
+                 const card = document.createElement('div');
+                 card.className = 'reminder-card p-3 mb-2 rounded-md shadow-sm text-sm';
+                 card.innerHTML = `<strong>${book.title}</strong> (Prestado a: ${book.loanedTo}) vence mañana (${formatDate(book.dueDate)}).`;
+                 remindersList.appendChild(card);
+             });
+        }
+
+        // Acciones Principales (Adaptadas)
+        function handleAddBookSubmit(e) { // Renombrada para claridad
+            e.preventDefault();
+            const title = document.getElementById('title').value.trim();
+            const author = document.getElementById('author').value.trim();
+            const category = document.getElementById('category').value.trim();
+            const location = document.getElementById('location').value.trim();
+            if (title && author && location) {
+                const books = getBooks();
+                const newBook = { title, author, category, location, status: 'disponible', loanedTo: '', loanDate: null, dueDate: null };
+                books.push(newBook);
+                saveBooks(books);
+                bookForm.reset();
+                showAddMessage(`¡Libro "${title}" añadido!`, 'success');
+                librarySearchInput.value = '';
+                navigateToSection('library-section');
+            } else { showAddMessage('Rellena Título, Autor/a y Ubicación.', 'error'); }
+        }
+        function deleteBook(index) {
+             const books = getBooks();
+             const bookToDelete = books[index];
+             let confirmMessage = `¿Seguro que quieres borrar el libro "${bookToDelete.title}"?`;
+             if (bookToDelete.status === 'prestado') confirmMessage = `¡Cuidado! "${bookToDelete.title}" está prestado a ${bookToDelete.loanedTo}. ¿Borrar igual?`;
+             if (confirm(confirmMessage)) {
+                 const deletedBookTitle = bookToDelete.title;
+                 books.splice(index, 1);
+                 saveBooks(books);
+                 showMessage(`Libro "${deletedBookTitle}" borrado.`, 'warning');
+                 refreshCurrentView();
+             }
+        }
+        function lendBook(index) {
+             const borrower = prompt("¿Quién se lleva prestado este libro?");
+             if (borrower && borrower.trim() !== "") {
+                 const books = getBooks();
+                 const today = getTodayISO();
+                 books[index].status = 'prestado';
+                 books[index].loanedTo = borrower.trim();
+                 books[index].loanDate = today;
+                 books[index].dueDate = addDays(today, LOAN_DURATION_DAYS);
+                 saveBooks(books);
+                 showMessage(`"${books[index].title}" prestado a ${borrower.trim()}. Vence el ${formatDate(books[index].dueDate)}.`, 'success');
+                 refreshCurrentView();
+             } else if (borrower !== null) { showMessage('Necesitas indicar quién se lleva el libro.', 'error'); }
+        }
+        function returnBook(index) {
+              const books = getBooks();
+              const book = books[index]; // Guardar referencia antes de modificar
+              const bookTitle = book.title;
+              const borrower = book.loanedTo;
+              const actualReturnDate = getTodayISO();
+              addLoanToHistory(book, actualReturnDate); // Usar la referencia guardada
+              // Resetear estado y fechas del libro en el array original
+              books[index].status = 'disponible';
+              books[index].loanedTo = '';
+              books[index].loanDate = null;
+              books[index].dueDate = null;
+              saveBooks(books);
+              showMessage(`¡"${bookTitle}" ha vuelto! Gracias, ${borrower}.`, 'success');
+              refreshCurrentView();
+              if (document.getElementById('history-section').classList.contains('active')) displayLoanHistory();
+        }
+        function extendLoan(index) {
+             const books = getBooks();
+             if (books[index].status !== 'prestado' || !books[index].dueDate) { showMessage("Este libro no está prestado o no tiene fecha de devolución.", "error"); return; }
+             const currentDueDate = books[index].dueDate;
+             const newDueDate = addDays(currentDueDate, LOAN_DURATION_DAYS);
+             if (confirm(`Extender préstamo de "${books[index].title}" hasta el ${formatDate(newDueDate)}?`)) {
+                 books[index].dueDate = newDueDate;
+                 saveBooks(books);
+                 showMessage(`Préstamo extendido hasta el ${formatDate(newDueDate)}.`, 'success');
+                 refreshCurrentView();
+             }
+        }
+
+        // Modal Edición Libro (Adaptado)
+        function openEditModal(index) {
+             const books = getBooks();
+             const book = books[index];
+             editBookIndexInput.value = index;
+             document.getElementById('edit-title').value = book.title;
+             document.getElementById('edit-author').value = book.author;
+             document.getElementById('edit-category').value = book.category || '';
+             document.getElementById('edit-location').value = book.location || '';
+             editModal.style.display = 'flex';
+        }
+        function closeEditModal() { editModal.style.display = 'none'; editBookForm.reset(); }
+        function handleEditBookSubmit(e) { // Renombrada para claridad
+             e.preventDefault();
+             const index = parseInt(editBookIndexInput.value, 10);
+             const books = getBooks();
+             const updatedTitle = document.getElementById('edit-title').value.trim();
+             const updatedAuthor = document.getElementById('edit-author').value.trim();
+             const updatedCategory = document.getElementById('edit-category').value.trim();
+             const updatedLocation = document.getElementById('edit-location').value.trim();
+             if (updatedTitle && updatedAuthor && updatedLocation && !isNaN(index)) {
+                 books[index].title = updatedTitle;
+                 books[index].author = updatedAuthor;
+                 books[index].category = updatedCategory;
+                 books[index].location = updatedLocation;
+                 saveBooks(books);
+                 closeEditModal();
+                 showMessage(`¡Libro "${updatedTitle}" actualizado!`, 'success');
+                 refreshCurrentView();
+             } else { showMessage('Error al guardar. Rellena Título, Autor/a y Ubicación.', 'error'); }
+        }
+
+        // Exportar CSV (Adaptado)
+        function escapeCSV(str) { if (str === null || str === undefined) return ''; str = String(str); if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) return `"${str.replace(/"/g, '""')}"`; return str; }
+        function exportToCSV(type) {
+             let data, headers, filename;
+             if (type === 'library') { data = getBooks(); headers = ['Título', 'Autor/a', 'Categoría', 'Ubicación', 'Estado', 'Prestado a', 'F. Préstamo', 'F. Devolución']; filename = "biblioteca_amigos_libros.csv"; if (data.length === 0) { showExportMessage("No hay libros para exportar.", "warning"); return; } }
+             else if (type === 'history') { data = getLoanHistory(); headers = ['Título', 'Autor/a', 'Prestado a', 'F. Préstamo', 'F. Devolución Real']; filename = "biblioteca_amigos_historial.csv"; if (data.length === 0) { showExportMessage("No hay historial para exportar.", "warning"); return; } }
+             else { return; }
+             const csvRows = data.map(item => type === 'library' ? [escapeCSV(item.title), escapeCSV(item.author), escapeCSV(item.category), escapeCSV(item.location), escapeCSV(item.status), escapeCSV(item.loanedTo), escapeCSV(formatDate(item.loanDate)), escapeCSV(formatDate(item.dueDate))].join(',') : [escapeCSV(item.title), escapeCSV(item.author), escapeCSV(item.loanedTo), escapeCSV(formatDate(item.loanDate)), escapeCSV(formatDate(item.returnDate))].join(','));
+             const bom = '\uFEFF'; const csvString = bom + [headers.join(','), ...csvRows].join('\r\n'); const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a");
+             if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); showExportMessage(`¡${type === 'library' ? 'Biblioteca' : 'Historial'} exportado a ${filename}!`, "success"); }
+             else { showExportMessage("Tu navegador no soporta la descarga directa.", "error"); }
+        }
+
+        // --- Helpers ---
+        function refreshCurrentView() {
+             const activeSection = document.querySelector('.content-section.active');
+             if (!activeSection) return;
+             displayBooksLibrary(); displayBooksLoans(); displayReminders();
+             if (activeSection.id === 'history-section') displayLoanHistory();
+             if (activeSection.id === 'user-management-section') displayUsers(); // Refrescar usuarios si está activa
+        }
+
+        // --- Fin de la lógica JavaScript ---
+    </script>
+
+</body>
+</html>
