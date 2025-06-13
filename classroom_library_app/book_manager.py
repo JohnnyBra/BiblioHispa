@@ -1,6 +1,6 @@
 import sqlite3
 import uuid
-import csv
+import csv # Re-added for CSV import functionality
 from datetime import datetime, timedelta
 import student_manager
 import os
@@ -24,18 +24,17 @@ def generate_id():
     """Generates a unique ID for a book."""
     return str(uuid.uuid4())
 
-def add_book_db(title, author, classroom, isbn=None, image_path=None):
+def add_book_db(titulo, autor, ubicacion, genero=None, cantidad_total=1): # Added genero, cantidad_total, changed others
     """Adds a new book to the database.
     Returns the new book's ID or None on failure."""
     book_id = generate_id()
-    status = 'available'
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO books (id, title, author, isbn, classroom, status, image_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (book_id, title, author, isbn, classroom, status, image_path))
+            INSERT INTO books (id, titulo, autor, genero, ubicacion, cantidad_total)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (book_id, titulo, autor, genero, ubicacion, cantidad_total))
         conn.commit()
         return book_id
     except sqlite3.Error as e:
@@ -45,28 +44,20 @@ def add_book_db(title, author, classroom, isbn=None, image_path=None):
         if conn:
             conn.close()
 
-def get_all_books_db(classroom_filter=None, status_filter=None):
-    """Queries the books table, applying optional filters for classroom and status.
+def get_all_books_db(ubicacion_filter=None): # Changed classroom_filter to ubicacion_filter, removed status_filter
+    """Queries the books table, applying optional filters for ubicacion.
     Returns a list of dictionaries (each dict representing a book)."""
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row # Access columns by name
         cursor = conn.cursor()
 
-        query = "SELECT * FROM books"
-        filters = []
+        query = "SELECT id, titulo, autor, genero, ubicacion, cantidad_total FROM books" # Updated columns
         params = []
 
-        if classroom_filter and classroom_filter != "All":
-            filters.append("classroom = ?")
-            params.append(classroom_filter)
-
-        if status_filter and status_filter != "All":
-            filters.append("status = ?")
-            params.append(status_filter)
-
-        if filters:
-            query += " WHERE " + " AND ".join(filters)
+        if ubicacion_filter and ubicacion_filter != "All": # Assuming "All" means no filter
+            query += " WHERE ubicacion = ?"
+            params.append(ubicacion_filter)
 
         cursor.execute(query, params)
         books = [dict(row) for row in cursor.fetchall()]
@@ -80,66 +71,88 @@ def get_all_books_db(classroom_filter=None, status_filter=None):
 
 def import_books_from_csv_db(file_path):
     """Reads a CSV file and adds books to the database.
-    Expected headers: Title, Author, Classroom, ISBN, CoverImage.
+    Expected headers: Título, Autor, Género, Ubicación, Cantidad_Total.
     Returns a tuple: (successful_imports_count, error_messages_list)."""
     successful_imports = 0
     error_messages = []
 
     try:
-        # file_path for import_books_from_csv_db is an absolute path from filedialog,
-        # so it does not need get_data_path.
         with open(file_path, mode='r', encoding='utf-8-sig') as file:
             reader = csv.DictReader(file)
 
-            required_headers = ["Title", "Author", "Classroom"]
-            if not all(header in reader.fieldnames for header in required_headers):
-                error_messages.append(f"CSV file is missing one or more required headers: {', '.join(required_headers)}. Found: {', '.join(reader.fieldnames or [])}")
+            # Verify headers
+            expected_headers = ["Título", "Autor", "Ubicación", "Cantidad_Total"] # Género is optional
+            # Allow for flexibility with "Genero" vs "Género"
+            actual_headers = reader.fieldnames
+            if not actual_headers:
+                 error_messages.append("El archivo CSV está vacío o no tiene encabezados.")
+                 return successful_imports, error_messages
+
+            # Normalize actual headers for comparison (e.g. handle BOM if any)
+            normalized_actual_headers = [h.strip() for h in actual_headers]
+
+
+            missing_headers = [eh for eh in expected_headers if eh not in normalized_actual_headers]
+            if missing_headers:
+                error_messages.append(f"El archivo CSV no contiene los encabezados requeridos: {', '.join(missing_headers)}. Encontrados: {', '.join(normalized_actual_headers)}")
                 return successful_imports, error_messages
 
-            for row_num, row in enumerate(reader, start=2): # start=2 for 1-based indexing + header
-                title = row.get("Title")
-                author = row.get("Author")
-                classroom = row.get("Classroom")
-                isbn = row.get("ISBN")
-                cover_image = row.get("CoverImage") # Or 'image_path' depending on CSV
+            # Check for Género header, handle if missing
+            genero_header_present = "Género" in normalized_actual_headers or "Genero" in normalized_actual_headers
+            genero_header_name = "Género" if "Género" in normalized_actual_headers else "Genero" if "Genero" in normalized_actual_headers else None
 
-                if not title or not author or not classroom:
-                    error_messages.append(f"Row {row_num}: Missing required fields (Title, Author, Classroom). Skipping.")
+
+            for row_num, row in enumerate(reader, start=2):
+                titulo = row.get("Título")
+                autor = row.get("Autor")
+                ubicacion = row.get("Ubicación")
+                cantidad_total_str = row.get("Cantidad_Total")
+                genero = row.get(genero_header_name) if genero_header_present and genero_header_name else None
+
+
+                if not titulo or not autor or not ubicacion or not cantidad_total_str:
+                    error_messages.append(f"Fila {row_num}: Faltan campos requeridos (Título, Autor, Ubicación, Cantidad_Total). Saltando fila.")
                     continue
 
-                book_id = add_book_db(title, author, classroom, isbn, cover_image)
+                try:
+                    cantidad_total_int = int(cantidad_total_str)
+                    if cantidad_total_int <= 0:
+                        error_messages.append(f"Fila {row_num}: 'Cantidad_Total' ({cantidad_total_str}) debe ser un número positivo. Usando 1 por defecto.")
+                        cantidad_total_int = 1
+                except ValueError:
+                    error_messages.append(f"Fila {row_num}: 'Cantidad_Total' ({cantidad_total_str}) no es un número válido. Usando 1 por defecto.")
+                    cantidad_total_int = 1
+
+                book_id = add_book_db(titulo, autor, ubicacion, genero, cantidad_total_int)
                 if book_id:
                     successful_imports += 1
                 else:
-                    error_messages.append(f"Row {row_num}: Failed to add book '{title}' by '{author}' to database.")
+                    error_messages.append(f"Fila {row_num}: Error al añadir libro '{titulo}' por '{autor}' a la base de datos.")
 
     except FileNotFoundError:
-        error_messages.append(f"Error: The file '{file_path}' was not found.")
+        error_messages.append(f"Error: No se encontró el archivo '{file_path}'.")
     except Exception as e:
-        error_messages.append(f"An unexpected error occurred during CSV import: {e}")
+        error_messages.append(f"Ocurrió un error inesperado durante la importación del CSV: {e}")
 
     return successful_imports, error_messages
 
-def search_books_db(query, search_field="title"):
+def search_books_db(query, search_field="titulo"): # default to 'titulo'
     """Searches books where search_field CONTAINS query (case-insensitive).
     Returns a list of book dictionaries."""
     if not query:
         return []
-
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row # Access columns by name
         cursor = conn.cursor()
 
-        # Basic protection against SQL injection for search_field
-        allowed_search_fields = ["title", "author", "isbn", "classroom", "status"] # Add more if needed
+        allowed_search_fields = ["titulo", "autor", "genero", "ubicacion"] # Updated fields
         if search_field not in allowed_search_fields:
-            print(f"Invalid search field: {search_field}. Defaulting to title.")
-            search_field = "title"
+            print(f"Invalid search field: {search_field}. Defaulting to titulo.")
+            search_field = "titulo"
 
         # Using LIKE for case-insensitive partial matching
-        # The ? placeholder will handle escaping the query string
-        sql_query = f"SELECT * FROM books WHERE {search_field} LIKE ?"
+        sql_query = f"SELECT id, titulo, autor, genero, ubicacion, cantidad_total FROM books WHERE {search_field} LIKE ?" # Updated columns
 
         cursor.execute(sql_query, (f"%{query}%",))
         books = [dict(row) for row in cursor.fetchall()]
@@ -153,10 +166,37 @@ def search_books_db(query, search_field="title"):
 
 # --- Loan Management Functions ---
 
-def loan_book_db(book_id, student_id, due_date, lending_student_leader_id):
-    """Loans a book to a student if validations pass.
-    Validates: student leader, book availability, student existence.
-    Updates book status, borrower_id, due_date. Returns True/False."""
+def get_available_book_count(book_id):
+    """Calculates the number of available copies for a given book_id."""
+    conn = None  # Ensure conn is defined in the outer scope for finally block
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        cursor = conn.cursor()
+
+        # Fetch total quantity of the book
+        cursor.execute("SELECT cantidad_total FROM books WHERE id = ?", (book_id,))
+        book_result = cursor.fetchone()
+        if not book_result:
+            print(f"Error: Book with ID {book_id} not found.")
+            return 0
+        cantidad_total = book_result[0]
+
+        # Count active loans for the book
+        cursor.execute("SELECT COUNT(*) FROM loans WHERE book_id = ?", (book_id,))
+        active_loans_count = cursor.fetchone()[0]
+
+        available_count = cantidad_total - active_loans_count
+        return available_count if available_count > 0 else 0
+
+    except sqlite3.Error as e:
+        print(f"Database error in get_available_book_count for book_id {book_id}: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+def loan_book_db(book_id, student_id, due_date_str, lending_student_leader_id):
+    """Records a book loan in the 'loans' table."""
     if not student_manager.is_student_leader(lending_student_leader_id):
         print(f"Loan Error: Lending student {lending_student_leader_id} is not a leader or does not exist.")
         return False
@@ -166,36 +206,33 @@ def loan_book_db(book_id, student_id, due_date, lending_student_leader_id):
         print(f"Loan Error: Borrower student {student_id} does not exist.")
         return False
 
+    conn = None # Ensure conn is defined for the finally block
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
 
-        cursor.execute("SELECT status, classroom FROM books WHERE id = ?", (book_id,))
-        book_data = cursor.fetchone()
-
-        if not book_data:
+        # Check if book exists (though get_available_book_count also implicitly checks)
+        cursor.execute("SELECT id FROM books WHERE id = ?", (book_id,))
+        if not cursor.fetchone():
             print(f"Loan Error: Book with ID {book_id} not found.")
             return False
 
-        current_status, book_classroom = book_data[0], book_data[1]
-
-        if current_status != 'available':
-            print(f"Loan Error: Book '{book_id}' is not available (current status: {current_status}).")
+        available_count = get_available_book_count(book_id)
+        if available_count <= 0:
+            print(f"Loan Error: No available copies of book ID {book_id} to loan.")
             return False
+
+        loan_id = str(uuid.uuid4())
+        loan_date_str = datetime.now().strftime('%Y-%m-%d')
 
         cursor.execute("""
-            UPDATE books
-            SET status = 'borrowed', borrower_id = ?, due_date = ?
-            WHERE id = ?
-        """, (student_id, due_date, book_id))
+            INSERT INTO loans (loan_id, book_id, student_id, loan_date, due_date)
+            VALUES (?, ?, ?, ?, ?)
+        """, (loan_id, book_id, student_id, loan_date_str, due_date_str))
         conn.commit()
 
-        if cursor.rowcount > 0:
-            print(f"Book '{book_id}' loaned to student '{student_id}' successfully.")
-            return True
-        else:
-            print(f"Loan Error: Failed to update book status for '{book_id}'.")
-            return False
+        print(f"Book '{book_id}' loaned to student '{student_id}' successfully. Loan ID: {loan_id}")
+        return True
 
     except sqlite3.Error as e:
         print(f"Database error in loan_book_db: {e}")
@@ -204,70 +241,63 @@ def loan_book_db(book_id, student_id, due_date, lending_student_leader_id):
         if conn:
             conn.close()
 
-def return_book_db(book_id, student_leader_id):
-    """Returns a book.
-    Validates: student leader, book is currently borrowed.
-    Updates book status, clears borrower_id, due_date. Returns True/False."""
+def return_book_db(loan_id, student_leader_id):
+    """Removes a loan record from the 'loans' table upon book return."""
     if not student_manager.is_student_leader(student_leader_id):
         print(f"Return Error: Returning student {student_leader_id} is not a leader or does not exist.")
         return False
 
+    if not loan_id:
+        print("Return Error: Loan ID cannot be empty.")
+        return False
+
+    conn = None # Ensure conn is defined for the finally block
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
 
-        cursor.execute("SELECT status FROM books WHERE id = ?", (book_id,))
-        result = cursor.fetchone()
-        if not result:
-            print(f"Return Error: Book ID {book_id} not found.")
-            return False
-
-        current_status = result[0]
-        if current_status != 'borrowed':
-            print(f"Return Error: Book '{book_id}' is not currently borrowed (status: {current_status}).")
-            return False
-
-        cursor.execute("""
-            UPDATE books
-            SET status = 'available', borrower_id = NULL, due_date = NULL
-            WHERE id = ?
-        """, (book_id,))
+        cursor.execute("DELETE FROM loans WHERE loan_id = ?", (loan_id,))
         conn.commit()
 
         if cursor.rowcount > 0:
-            print(f"Book '{book_id}' returned successfully.")
+            print(f"Loan ID '{loan_id}' returned successfully.")
             return True
         else:
-            print(f"Return Error: Failed to update book status for '{book_id}' upon return.")
+            print(f"Return Error: No loan found with ID '{loan_id}', or failed to delete.")
             return False
 
     except sqlite3.Error as e:
-        print(f"Database error in return_book_db: {e}")
+        print(f"Database error in return_book_db for loan_id {loan_id}: {e}")
         return False
     finally:
         if conn:
             conn.close()
 
-def get_current_loans_db(classroom_filter=None):
-    """Fetches books with status 'borrowed', joining with students for borrower_name.
-    Filters by books.classroom if classroom_filter is provided.
-    Returns list of dicts (book info + borrower_name)."""
+def get_current_loans_db(ubicacion_filter=None):
+    """Fetches current loans, joining with books and students tables.
+    Filters by books.ubicacion if ubicacion_filter is provided.
+    Returns list of dicts (loan info + book info + borrower_name)."""
+    conn = None
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
         query = """
-            SELECT b.*, s.name as borrower_name
-            FROM books b
-            JOIN students s ON b.borrower_id = s.id
-            WHERE b.status = 'borrowed'
+            SELECT l.loan_id, l.loan_date, l.due_date,
+                   b.id as book_id, b.titulo, b.autor, b.genero, b.ubicacion,
+                   s.id as student_id, s.name as borrower_name
+            FROM loans l
+            JOIN books b ON l.book_id = b.id
+            JOIN students s ON l.student_id = s.id
         """
         params = []
 
-        if classroom_filter and classroom_filter != "All":
-            query += " AND b.classroom = ?"
-            params.append(classroom_filter)
+        if ubicacion_filter and ubicacion_filter != "All":
+            query += " WHERE b.ubicacion = ?"
+            params.append(ubicacion_filter)
+
+        query += " ORDER BY l.due_date ASC"
 
         cursor.execute(query, params)
         loans = [dict(row) for row in cursor.fetchall()]
@@ -279,10 +309,11 @@ def get_current_loans_db(classroom_filter=None):
         if conn:
             conn.close()
 
-def get_books_due_soon_db(days_threshold=7, classroom_filter=None):
-    """Fetches borrowed books due within days_threshold or already overdue.
-    Joins with students for borrower_name. Filters by classroom.
-    Returns list of dicts. (Due date format is YYYY-MM-DD)."""
+def get_books_due_soon_db(days_threshold=7, ubicacion_filter=None):
+    """Fetches loans due within days_threshold or already overdue.
+    Joins with books and students. Filters by books.ubicacion.
+    Returns list of dicts."""
+    conn = None
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row
@@ -291,19 +322,21 @@ def get_books_due_soon_db(days_threshold=7, classroom_filter=None):
         threshold_date_str = (datetime.now().date() + timedelta(days=days_threshold)).strftime('%Y-%m-%d')
 
         query = """
-            SELECT b.*, s.name as borrower_name
-            FROM books b
-            JOIN students s ON b.borrower_id = s.id
-            WHERE b.status = 'borrowed' AND b.due_date IS NOT NULL
-            AND b.due_date <= ?
+            SELECT l.loan_id, l.loan_date, l.due_date,
+                   b.id as book_id, b.titulo, b.autor, b.genero, b.ubicacion,
+                   s.id as student_id, s.name as borrower_name
+            FROM loans l
+            JOIN books b ON l.book_id = b.id
+            JOIN students s ON l.student_id = s.id
+            WHERE l.due_date <= ?
         """
         params = [threshold_date_str]
 
-        if classroom_filter and classroom_filter != "All":
-            query += " AND b.classroom = ?"
-            params.append(classroom_filter)
+        if ubicacion_filter and ubicacion_filter != "All":
+            query += " AND b.ubicacion = ?"
+            params.append(ubicacion_filter)
 
-        query += " ORDER BY b.due_date ASC"
+        query += " ORDER BY l.due_date ASC"
 
         cursor.execute(query, params)
         due_books = [dict(row) for row in cursor.fetchall()]
@@ -323,192 +356,83 @@ if __name__ == '__main__':
 
     # Test adding a book
     print("Attempting to add a book...")
-    # new_id = add_book_db("The Little Prince", "Antoine de Saint-Exupéry", "Class A", "978-0156012195")
+    # new_id = add_book_db("El Principito", "Antoine de Saint-Exupéry", "Salón A", "Fábula", 5)
     # if new_id:
-    #     print(f"Book added successfully with ID: {new_id}")
+    #     print(f"Libro añadido con ID: {new_id}")
     # else:
-    #     print("Failed to add book.")
-
-    # Test adding another book
-    # new_id_2 = add_book_db("To Kill a Mockingbird", "Harper Lee", "Class B", "978-0061120084")
-    # if new_id_2:
-    #     print(f"Book added successfully with ID: {new_id_2}")
-    # else:
-    #     print("Failed to add book.")
+    #     print("Error al añadir libro.")
 
     # Test getting all books
-    print("\nGetting all books:")
+    print("\nObteniendo todos los libros:")
     all_books = get_all_books_db()
     if all_books:
         for book in all_books:
-            print(f"  Title: {book['title']}, Author: {book['author']}, Classroom: {book['classroom']}, Status: {book['status']}")
+            print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}, Cantidad: {book['cantidad_total']}")
     else:
-        print("No books found or error occurred.")
+        print("No se encontraron libros o ocurrió un error.")
 
-    # Test getting books for a specific classroom
-    print("\nGetting books for Class A:")
-    class_a_books = get_all_books_db(classroom_filter="Class A")
-    if class_a_books:
-        for book in class_a_books:
-            print(f"  Title: {book['title']}, Author: {book['author']}, Classroom: {book['classroom']}")
+    # Test getting books for a specific ubicacion
+    print("\nObteniendo libros para Salón A:")
+    salon_a_books = get_all_books_db(ubicacion_filter="Salón A")
+    if salon_a_books:
+        for book in salon_a_books:
+            print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}")
     else:
-        print("No books found for Class A.")
-
-    # Test getting available books
-    print("\nGetting available books:")
-    available_books = get_all_books_db(status_filter="available")
-    if available_books:
-        for book in available_books:
-            print(f"  Title: {book['title']}, Status: {book['status']}")
-    else:
-        print("No available books found.")
-
-    # Test getting available books for Class B
-    # print("\nGetting available books for Class B:")
-    # available_class_b_books = get_all_books_db(classroom_filter="Class B", status_filter="available")
-    # if available_class_b_books:
-    #     for book in available_class_b_books:
-    #         print(f"  Title: {book['title']}, Classroom: {book['classroom']}, Status: {book['status']}")
-    # else:
-    #     print("No available books found for Class B.")
-
-    # Test importing books from CSV
-    # print(f"\nImporting books from sample_books.csv:")
-    # import os
-    # if not os.path.exists("assets"):
-    #     os.makedirs("assets")
-    # # To test import_books_from_csv_db, you would typically run the main app
-    # # and use the UI, or ensure 'assets/sample_books.csv' exists and call:
-    # # success_count, errors = import_books_from_csv_db("assets/sample_books.csv")
-    # # print(f"Successfully imported {success_count} books.")
-    # # if errors:
-    # #     print("Errors during import:")
-    # #     for error in errors:
-    # #         print(f"  - {error}")
-    #
-    # print("\nBooks after potential import (if you uncommented and ran import):")
-    # all_books_after_import = get_all_books_db()
-    # if all_books_after_import:
-    #     for book in all_books_after_import:
-    #         print(f"  Title: {book['title']}, Author: {book['author']}, Classroom: {book['classroom']}")
-    # else:
-    #     print("No books found or error occurred.")
+        print("No se encontraron libros para Salón A.")
 
     # Test searching books
-    # print("\nSearching for books with 'Cat' in title:") # Assuming Cat in the Hat was added or imported
-    # # Ensure init_db() was called from student_manager or main to have tables ready for loan tests
-    # # from database.db_setup import init_db
-    # # init_db()
-    #
-    # # Sample data for testing loan functions (assuming student_manager.py was run or students exist)
-    # # Ensure these IDs exist in your DB if running this test block directly.
-    # sample_book_id_available = add_book_db("Available Book 1", "Author A", "Class A")
-    # sample_book_id_borrowed = add_book_db("Borrowed Book 1", "Author B", "Class A") # Will be borrowed
-    #
-    # # Assuming student_manager.py created these or you add them manually for testing
-    # # student_leader_id = student_manager.add_student_db("Test Leader", "Class A", "leader")
-    # # regular_student_id = student_manager.add_student_db("Test Borrower", "Class A", "student")
-    #
-    # # Manually find/set existing IDs from your DB for robust testing if not adding above:
-    # print("\n--- Setup for Loan/Return Tests ---")
-    # print("Fetching existing leader and student for tests...")
-    # leaders_for_test = student_manager.get_students_db(role_filter="leader", classroom_filter="Class A")
-    # students_for_test = student_manager.get_students_db(role_filter="student", classroom_filter="Class A")
-    #
-    # if not leaders_for_test or not students_for_test:
-    #     print("Please ensure you have at least one leader and one student in Class A to run loan tests.")
-    # else:
-    #     student_leader_id = leaders_for_test[0]['id']
-    #     regular_student_id = students_for_test[0]['id']
-    #     print(f"Using Leader ID: {student_leader_id}, Student ID: {regular_student_id} for tests")
-    #
-    #     if sample_book_id_available:
-    #         print(f"Available book for loan test: {sample_book_id_available}")
-    #
-    #     # Test loan_book_db
-    #     print("\n--- Testing loan_book_db ---")
-    #     due_date_str = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
-    #     if sample_book_id_available and student_leader_id and regular_student_id:
-    #         loan_success = loan_book_db(sample_book_id_available, regular_student_id, due_date_str, student_leader_id)
-    #         print(f"Loan attempt for '{sample_book_id_available}' to '{regular_student_id}': {'Success' if loan_success else 'Failed'}")
-    #         if loan_success:
-    #             # Setup sample_book_id_borrowed to be this book for return test
-    #             sample_book_id_borrowed = sample_book_id_available
-    #
-    #     # Test loan_book_db - book already borrowed
-    #     if sample_book_id_borrowed and student_leader_id and regular_student_id: # Try to loan the now borrowed book
-    #         loan_fail_due_to_status = loan_book_db(sample_book_id_borrowed, regular_student_id, due_date_str, student_leader_id)
-    #         print(f"Loan attempt for already borrowed book '{sample_book_id_borrowed}': {'Failed as expected' if not loan_fail_due_to_status else 'Unexpectedly succeeded'}")
-    #
-    #     # Test loan_book_db - invalid leader
-    #     if sample_book_id_available and regular_student_id: # Assuming sample_book_id_available is still available or use another one
-    #         another_available_book = add_book_db("Available Book 2", "Author C", "Class A")
-    #         if another_available_book:
-    #             loan_fail_leader = loan_book_db(another_available_book, regular_student_id, due_date_str, "invalid_leader_id")
-    #             print(f"Loan attempt with invalid leader: {'Failed as expected' if not loan_fail_leader else 'Unexpectedly succeeded'}")
-    #
-    #     # Test get_current_loans_db
-    #     print("\n--- Testing get_current_loans_db ---")
-    #     current_loans_class_a = get_current_loans_db(classroom_filter="Class A")
-    #     if current_loans_class_a:
-    #         print("Current Loans in Class A:")
-    #         for loan in current_loans_class_a:
-    #             print(f"  Book: {loan['title']}, Borrower: {loan.get('borrower_name', 'N/A')}, Due: {loan['due_date']}")
-    #     else:
-    #         print("No current loans found in Class A.")
-    #
-    #     # Test get_books_due_soon_db
-    #     print("\n--- Testing get_books_due_soon_db ---")
-    #     due_soon_class_a = get_books_due_soon_db(days_threshold=15, classroom_filter="Class A") # Should catch the book loaned above
-    #     if due_soon_class_a:
-    #         print("Books due soon/overdue in Class A (15 days threshold):")
-    #         for book in due_soon_class_a:
-    #             print(f"  Book: {book['title']}, Borrower: {book.get('borrower_name', 'N/A')}, Due: {book['due_date']}")
-    #     else:
-    #         print("No books due soon or overdue in Class A with 15 days threshold.")
-    #
-    #     # Test return_book_db
-    #     print("\n--- Testing return_book_db ---")
-    #     if sample_book_id_borrowed and student_leader_id : # This book should be currently borrowed
-    #         return_success = return_book_db(sample_book_id_borrowed, student_leader_id)
-    #         print(f"Return attempt for '{sample_book_id_borrowed}': {'Success' if return_success else 'Failed'}")
-    #
-    #     # Test return_book_db - book not borrowed
-    #     # Use another_available_book which was not successfully loaned or add a new one
-    #     not_borrowed_book_id = add_book_db("Not Borrowed Book", "Author D", "Class A")
-    #     if not_borrowed_book_id and student_leader_id:
-    #         return_fail_status = return_book_db(not_borrowed_book_id, student_leader_id)
-    #         print(f"Return attempt for not borrowed book '{not_borrowed_book_id}': {'Failed as expected' if not return_fail_status else 'Unexpectedly succeeded'}")
-    #
-    #     print("\n--- Final check of loans in Class A after return ---")
-    #     final_loans_class_a = get_current_loans_db(classroom_filter="Class A")
-    #     if final_loans_class_a:
-    #         print("Current Loans in Class A:")
-    #         for loan in final_loans_class_a:
-    #             print(f"  Book: {loan['title']}, Borrower: {loan.get('borrower_name', 'N/A')}, Due: {loan['due_date']}")
-    #     else:
-    #         print("No current loans found in Class A (as expected if all returned).")
+    print("\nBuscando libros con 'Principito' en título:")
+    cat_books = search_books_db("Principito", "titulo")
+    if cat_books:
+        for book in cat_books:
+            print(f"  Encontrado: {book['titulo']} por {book['autor']}")
+    else:
+        print("No se encontraron libros con 'Principito' en el título.")
 
-    # cat_books = search_books_db("Cat", "title")
-    # if cat_books:
-    #     for book in cat_books:
-    #         print(f"  Found: {book['title']} by {book['author']}")
-    # else:
-    #     print("No books found with 'Cat' in title.")
+    # Loan management functions below this point are not yet updated for the new schema
+    # and will likely not work correctly. They are preserved as placeholders for future refactoring.
+    # ... (original __main__ content for loan tests would be here, but needs significant changes) ...
+    # Example Usage (for testing purposes)
+    # First, ensure database and table are created by running db_setup.py or main.py
+    # from database.db_setup import init_db
+    # init_db() # Make sure db is initialized
 
-    # print("\nSearching for books by author 'Dr. Seuss':")
-    # seuss_books = search_books_db("Dr. Seuss", "author")
-    # if seuss_books:
-    #     for book in seuss_books:
-    #         print(f"  Found: {book['title']} by {book['author']}")
+    # Test adding a book
+    print("Attempting to add a book...")
+    # new_id = add_book_db("El Principito", "Antoine de Saint-Exupéry", "Salón A", "Fábula", 5)
+    # if new_id:
+    #     print(f"Libro añadido con ID: {new_id}")
     # else:
-    #     print("No books by 'Dr. Seuss' found.")
-    #
-    # print("\nSearching for books in 'Class A':")
-    # class_a_search_books = search_books_db("Class A", "classroom")
-    # if class_a_search_books:
-    #     for book in class_a_search_books:
-    #         print(f"  Found: {book['title']} in {book['classroom']}")
-    # else:
-    #     print("No books found in 'Class A' through search.")
+    #     print("Error al añadir libro.")
+
+    # Test getting all books
+    print("\nObteniendo todos los libros:")
+    all_books = get_all_books_db()
+    if all_books:
+        for book in all_books:
+            print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}, Cantidad: {book['cantidad_total']}")
+    else:
+        print("No se encontraron libros o ocurrió un error.")
+
+    # Test getting books for a specific ubicacion
+    print("\nObteniendo libros para Salón A:")
+    salon_a_books = get_all_books_db(ubicacion_filter="Salón A")
+    if salon_a_books:
+        for book in salon_a_books:
+            print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}")
+    else:
+        print("No se encontraron libros para Salón A.")
+
+    # Test searching books
+    print("\nBuscando libros con 'Principito' en título:")
+    cat_books = search_books_db("Principito", "titulo")
+    if cat_books:
+        for book in cat_books:
+            print(f"  Encontrado: {book['titulo']} por {book['autor']}")
+    else:
+        print("No se encontraron libros con 'Principito' en el título.")
+
+    # Loan management functions below this point are not yet updated for the new schema
+    # and will likely not work correctly. They are preserved as placeholders for future refactoring.
+    # ... (original __main__ content for loan tests would be here, but needs significant changes) ...
     pass # Keep the if __name__ == '__main__': block for future direct script testing if needed
