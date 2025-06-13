@@ -34,6 +34,13 @@ def init_db():
         # BUNDLE: MEIPASS/database/library.db
         actual_db_path = get_data_path(DB_PATH_FOR_CODE)
 
+        print("\n--- IMPORTANT ---")
+        print("If you've run this application before with an older database structure,")
+        print(f"you MIGHT need to delete the existing database file at '{actual_db_path}'")
+        print("for schema changes (like new tables or columns) to apply correctly.")
+        print("This is because tables are created with 'IF NOT EXISTS' and won't be altered if they already exist.")
+        print("--- IMPORTANT ---\n")
+
         # Ensure the directory exists, especially for development if running init_db() standalone
         os.makedirs(os.path.dirname(actual_db_path), exist_ok=True)
 
@@ -43,14 +50,24 @@ def init_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS books (
                 id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                author TEXT NOT NULL,
-                isbn TEXT,
-                classroom TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'available',
-                borrower_id TEXT,
-                due_date TEXT,
-                image_path TEXT
+                titulo TEXT NOT NULL,
+                autor TEXT NOT NULL,
+                genero TEXT,
+                ubicacion TEXT NOT NULL,
+                cantidad_total INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+
+        # Create loans table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS loans (
+                loan_id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL,
+                student_id TEXT NOT NULL,
+                loan_date TEXT NOT NULL,
+                due_date TEXT NOT NULL,
+                FOREIGN KEY (book_id) REFERENCES books(id),
+                FOREIGN KEY (student_id) REFERENCES students(id)
             )
         """)
 

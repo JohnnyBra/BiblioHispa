@@ -29,7 +29,7 @@ BUTTON_FONT = (APP_FONT_FAMILY, 12, "bold")
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("📚 Classroom Library Manager 🧸")
+        self.title("📚 Gestor de Biblioteca Escolar 🧸") # Translated
         self.geometry("950x750")
 
         # Initialize database
@@ -50,23 +50,23 @@ class App(ctk.CTk):
             return
 
         self.login_window = ctk.CTkToplevel(self)
-        self.login_window.title("Login")
+        self.login_window.title("Iniciar Sesión") # Translated
         self.login_window.geometry("350x250")
-        self.login_window.transient(self) # Make it appear on top of the main window (if visible)
-        self.login_window.grab_set() # Make it modal
-        self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application) # Handle window close
+        self.login_window.transient(self)
+        self.login_window.grab_set()
+        self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application)
 
-        ctk.CTkLabel(self.login_window, text="Welcome! Please Login", font=HEADING_FONT).pack(pady=20)
+        ctk.CTkLabel(self.login_window, text="¡Bienvenido/a! Por favor, inicia sesión", font=HEADING_FONT).pack(pady=20) # Translated
 
         frame = ctk.CTkFrame(self.login_window)
         frame.pack(pady=10, padx=20, fill="x")
 
-        ctk.CTkLabel(frame, text="Username (Name):", font=BODY_FONT).grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=200)
+        ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=5, pady=5, sticky="w") # Translated
+        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=200, placeholder_text="Nombre de usuario") # Translated placeholder
         username_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        ctk.CTkLabel(frame, text="Password:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=200)
+        ctk.CTkLabel(frame, text="Contraseña:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated
+        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=200, placeholder_text="Contraseña") # Translated placeholder
         password_entry.grid(row=1, column=1, padx=5, pady=5)
 
         # Give focus to username entry initially
@@ -84,19 +84,19 @@ class App(ctk.CTk):
             if auth_manager.login(username, password):
                 self.login_window.destroy()
                 self.login_window = None
-                self.initialize_main_app_ui() # Initialize and show the main app
+                self.initialize_main_app_ui()
             else:
-                error_label.configure(text="Login failed. Invalid username or password.")
-                password_entry.delete(0, "end") # Clear password field
-                username_entry.focus() # Set focus back to username
+                error_label.configure(text="Error de acceso. Usuario o contraseña incorrectos.") # Translated
+                password_entry.delete(0, "end")
+                username_entry.focus()
 
         button_frame = ctk.CTkFrame(self.login_window, fg_color="transparent")
         button_frame.pack(pady=10)
 
-        login_button = ctk.CTkButton(button_frame, text="Login", font=BUTTON_FONT, command=login_action)
+        login_button = ctk.CTkButton(button_frame, text="Acceder", font=BUTTON_FONT, command=login_action) # Translated
         login_button.pack(side="left", padx=10)
 
-        quit_button = ctk.CTkButton(button_frame, text="Quit", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60")
+        quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60") # Translated
         quit_button.pack(side="left", padx=10)
 
         # Center the login window
@@ -111,18 +111,18 @@ class App(ctk.CTk):
         self.tab_view = ctk.CTkTabview(self)
         self.tab_view.pack(expand=True, fill="both", padx=15, pady=15)
 
-        self.manage_books_tab = self.tab_view.add("📖 Manage Books")
-        self.view_books_tab = self.tab_view.add("📚 View Books")
-        self.manage_students_tab = self.tab_view.add("🧑‍🎓 Manage Students") # Original student management
-        self.manage_loans_tab = self.tab_view.add("🔄 Manage Loans")
+        self.manage_books_tab = self.tab_view.add("📖 Gestionar Libros") # Translated
+        self.view_books_tab = self.tab_view.add("📚 Ver Libros") # Translated
+        self.manage_students_tab = self.tab_view.add("🧑‍🎓 Gestionar Alumnos") # Translated
+        self.manage_loans_tab = self.tab_view.add("🔄 Gestionar Préstamos") # Translated
 
         # Conditionally add User Management Tab
         if auth_manager.is_admin():
-            self.manage_users_tab = self.tab_view.add("👤 User Management") # Advanced user management
-            if hasattr(self, 'setup_manage_users_tab'): # Ensure method exists
+            self.manage_users_tab = self.tab_view.add("👤 Gestionar Usuarios") # Translated
+            if hasattr(self, 'setup_manage_users_tab'):
                  self.setup_manage_users_tab()
             else:
-                print("Error: setup_manage_users_tab method not found but was expected for admin.")
+                print("Error: El método setup_manage_users_tab no se encontró pero se esperaba para el admin.") # Translated
         else:
             # Ensure self.manage_users_tab is None or handled if it might exist from a previous session/state
             self.manage_users_tab = None
@@ -183,123 +183,142 @@ class App(ctk.CTk):
         tab.configure(fg_color=("#F0F8FF", "#2A2D2E")) # AliceBlue for light, dark gray for dark
 
         # --- Add Book Form ---
-        add_book_frame = ctk.CTkFrame(tab, corner_radius=10) # Added corner_radius
+        add_book_frame = ctk.CTkFrame(tab, corner_radius=10)
         add_book_frame.pack(pady=15, padx=15, fill="x")
 
-        ctk.CTkLabel(add_book_frame, text="✨ Add a Magical New Book! ✨", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15))
+        ctk.CTkLabel(add_book_frame, text="✨ ¡Añade un Nuevo Libro Mágico! ✨", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15)) # Translated
 
-        ctk.CTkLabel(add_book_frame, text="Title:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=8, sticky="w")
-        self.title_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="e.g., The Little Prince")
+        ctk.CTkLabel(add_book_frame, text="Título:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=8, sticky="w")
+        self.title_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., El Principito") # Translated
         self.title_entry.grid(row=1, column=1, padx=10, pady=8, sticky="ew")
 
-        ctk.CTkLabel(add_book_frame, text="Author:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=8, sticky="w")
-        self.author_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="e.g., Antoine de Saint-Exupéry")
+        ctk.CTkLabel(add_book_frame, text="Autor:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=8, sticky="w")
+        self.author_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Antoine de Saint-Exupéry") # Translated
         self.author_entry.grid(row=2, column=1, padx=10, pady=8, sticky="ew")
 
-        ctk.CTkLabel(add_book_frame, text="ISBN:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=8, sticky="w")
-        self.isbn_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Optional, e.g., 978-0156012195")
-        self.isbn_entry.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
+        ctk.CTkLabel(add_book_frame, text="Género:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=8, sticky="w")
+        self.genero_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Fábula, Ciencia Ficción") # Translated
+        self.genero_entry.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
 
-        ctk.CTkLabel(add_book_frame, text="Classroom:", font=BODY_FONT).grid(row=4, column=0, padx=10, pady=8, sticky="w")
-        self.classroom_combobox = ctk.CTkComboBox(add_book_frame, values=["Class A", "Class B", "Class C", "Class D"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT)
-        self.classroom_combobox.grid(row=4, column=1, padx=10, pady=8, sticky="ew")
-        self.classroom_combobox.set("Class A")
+        ctk.CTkLabel(add_book_frame, text="Ubicación:", font=BODY_FONT).grid(row=4, column=0, padx=10, pady=8, sticky="w")
+        self.ubicacion_combobox = ctk.CTkComboBox(add_book_frame, values=["Salón A", "Salón B", "Salón C", "Biblioteca"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Values may need translation later
+        self.ubicacion_combobox.grid(row=4, column=1, padx=10, pady=8, sticky="ew")
+        self.ubicacion_combobox.set("Salón A")
 
-        add_book_icon = self.load_icon("add_book") # Example: assets/icons/add_book.png
-        add_button = ctk.CTkButton(add_book_frame, text="Add Book to Library", image=add_book_icon, font=BUTTON_FONT, command=self.add_book_ui, corner_radius=8)
-        add_button.grid(row=5, column=0, columnspan=2, pady=15, padx=10, sticky="ew")
-        add_book_frame.columnconfigure(1, weight=1) # Make entry column expandable
+        ctk.CTkLabel(add_book_frame, text="Cantidad Total:", font=BODY_FONT).grid(row=5, column=0, padx=10, pady=8, sticky="w")
+        self.cantidad_total_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., 1") # Translated
+        self.cantidad_total_entry.grid(row=5, column=1, padx=10, pady=8, sticky="ew")
+
+        add_book_icon = self.load_icon("add_book")
+        add_button = ctk.CTkButton(add_book_frame, text="Añadir Libro a la Biblioteca", image=add_book_icon, font=BUTTON_FONT, command=self.add_book_ui, corner_radius=8)
+        add_button.grid(row=6, column=0, columnspan=2, pady=15, padx=10, sticky="ew")
+        add_book_frame.columnconfigure(1, weight=1)
 
         # --- Import CSV Section ---
         import_csv_frame = ctk.CTkFrame(tab, corner_radius=10)
         import_csv_frame.pack(pady=15, padx=15, fill="x")
-
-        ctk.CTkLabel(import_csv_frame, text="📤 Import Books from CSV File 📤", font=HEADING_FONT).pack(pady=(10,15))
-
-        import_csv_icon = self.load_icon("import_csv") # Example: assets/icons/import_csv.png
-        import_button = ctk.CTkButton(import_csv_frame, text="Select CSV File", image=import_csv_icon, font=BUTTON_FONT, command=self.import_csv_ui, corner_radius=8)
+        ctk.CTkLabel(import_csv_frame, text="📤 Importar Libros desde Archivo CSV 📤", font=HEADING_FONT).pack(pady=(10,15)) # Translated
+        import_csv_icon = self.load_icon("import_csv")
+        import_button = ctk.CTkButton(import_csv_frame, text="Seleccionar Archivo CSV", image=import_csv_icon, font=BUTTON_FONT, command=self.import_csv_ui, corner_radius=8) # Translated
         import_button.pack(pady=10, padx=60, fill="x")
 
 
     def add_book_ui(self):
-        title = self.title_entry.get()
-        author = self.author_entry.get()
-        isbn = self.isbn_entry.get()
-        classroom = self.classroom_combobox.get()
+        titulo = self.title_entry.get()
+        autor = self.author_entry.get()
+        genero = self.genero_entry.get() # New field
+        ubicacion = self.ubicacion_combobox.get() # Renamed, was classroom
+        cantidad_total_str = self.cantidad_total_entry.get()
 
-        if not title or not author or not classroom:
-            messagebox.showerror("Hold on! 🚧", "Oops! Title, Author, and Classroom are needed to add a new book.")
+        if not titulo or not autor or not ubicacion or not cantidad_total_str:
+            messagebox.showerror("¡Un momento! 🚧", "¡Uy! Título, Autor, Ubicación y Cantidad Total son necesarios.") # Translated
             return
 
-        book_id = book_manager.add_book_db(title, author, classroom, isbn if isbn else None)
+        try:
+            cantidad_total = int(cantidad_total_str)
+            if cantidad_total <= 0:
+                messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número positivo.") # Translated
+                return
+        except ValueError:
+            messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número válido.") # Translated
+            return
+
+        # Assuming book_manager.add_book_db signature is (titulo, autor, ubicacion, genero=None, cantidad_total=1)
+        book_id = book_manager.add_book_db(titulo, autor, ubicacion, genero if genero else None, cantidad_total)
 
         if book_id:
-            messagebox.showinfo("Hooray! 🎉", f"Great job! Book '{title}' has been successfully added to the library!")
+            messagebox.showinfo("¡Éxito! 🎉", f"¡Excelente! El libro '{titulo}' ha sido añadido correctamente.") # Translated
             self.title_entry.delete(0, "end")
             self.author_entry.delete(0, "end")
-            self.isbn_entry.delete(0, "end")
+            self.genero_entry.delete(0, "end")
+            # self.ubicacion_combobox.set("Salón A") # Reset to default or clear
+            self.cantidad_total_entry.delete(0, "end")
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
             if hasattr(self, 'refresh_loan_related_combos_and_lists'): self.refresh_loan_related_combos_and_lists()
         else:
-            messagebox.showerror("Uh oh! 😟", "Oh no! Something went wrong while adding the book. Please check the details or console.")
+            messagebox.showerror("¡Oh no! 😟", "Algo salió mal al añadir el libro.") # Translated
 
-    def import_csv_ui(self):
+    def import_csv_ui(self): # Re-implemented
         file_path = filedialog.askopenfilename(
-            title="Select CSV file",
-            filetypes=(("CSV files", "*.csv"), ("All files", "*.*"))
+            title="Seleccionar archivo CSV para importar", # Translated
+            filetypes=(("Archivos CSV", "*.csv"), ("Todos los archivos", "*.*")) # Translated
         )
         if not file_path:
             return
 
-        import os
-        if not os.path.exists("assets"):
-            os.makedirs("assets")
+        # The os.makedirs("assets") line was likely for a sample CSV, not needed for general import.
+        # If a specific assets folder for user-provided CSVs was intended, that's a different feature.
 
         success_count, errors = book_manager.import_books_from_csv_db(file_path)
 
-        summary_message = f"CSV Import Summary:\n\nSuccessfully imported {success_count} books."
+        summary_message = f"Resumen de Importación CSV:\n\nLibros importados con éxito: {success_count}." # Translated
         if errors:
-            summary_message += "\n\nErrors encountered:\n" + "\n".join(f"- {e}" for e in errors)
-            messagebox.showwarning("Import Partially Successful", summary_message)
+            summary_message += "\n\nErrores encontrados:\n" + "\n".join(f"- {e}" for e in errors)
+            messagebox.showwarning("Importación Parcialmente Exitosa", summary_message) # Translated
         else:
-            messagebox.showinfo("Import Successful", summary_message)
-        self.refresh_book_list_ui()
+            messagebox.showinfo("Importación Exitosa", summary_message) # Translated
+
+        if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
+        if hasattr(self, 'refresh_loan_related_combos_and_lists'): self.refresh_loan_related_combos_and_lists()
+
 
     def setup_view_books_tab(self):
         tab = self.view_books_tab
-        tab.configure(fg_color=("#E6F0FA", "#2B2B2B")) # Light blueish for light, slightly different dark
+        tab.configure(fg_color=("#E6F0FA", "#2B2B2B"))
 
         controls_frame = ctk.CTkFrame(tab, corner_radius=10)
         controls_frame.pack(pady=15, padx=15, fill="x")
 
-        ctk.CTkLabel(controls_frame, text="Filter by Classroom:", font=BODY_FONT).grid(row=0, column=0, padx=(10,5), pady=10, sticky="w")
-        self.view_classroom_filter = ctk.CTkComboBox(controls_frame, values=["All", "Class A", "Class B", "Class C", "Class D"], command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150)
-        self.view_classroom_filter.grid(row=0, column=1, padx=5, pady=10)
-        self.view_classroom_filter.set("All")
+        ctk.CTkLabel(controls_frame, text="Filtrar por Ubicación:", font=BODY_FONT).grid(row=0, column=0, padx=(10,5), pady=10, sticky="w")
+        self.view_ubicacion_filter = ctk.CTkComboBox(controls_frame, values=["Todos", "Salón A", "Salón B", "Salón C", "Biblioteca"], command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150) # Translated "All"
+        self.view_ubicacion_filter.grid(row=0, column=1, padx=5, pady=10)
+        self.view_ubicacion_filter.set("Todos") # Translated "All"
 
-        ctk.CTkLabel(controls_frame, text="Filter by Status:", font=BODY_FONT).grid(row=0, column=2, padx=(10,5), pady=10, sticky="w")
-        self.view_status_filter = ctk.CTkComboBox(controls_frame, values=["All", "available", "borrowed"], command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150)
-        self.view_status_filter.grid(row=0, column=3, padx=5, pady=10)
-        self.view_status_filter.set("All")
+        # Status filter removed
+        # ctk.CTkLabel(controls_frame, text="Filter by Status:", font=BODY_FONT).grid(row=0, column=2, padx=(10,5), pady=10, sticky="w")
+        # self.view_status_filter = ctk.CTkComboBox(controls_frame, values=["All", "available", "borrowed"], command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150)
+        # self.view_status_filter.grid(row=0, column=3, padx=5, pady=10)
+        # self.view_status_filter.set("All")
 
-        controls_frame.columnconfigure((1,3), weight=1) # Allow comboboxes to take some space
+        controls_frame.columnconfigure(1, weight=1) # Allow combobox to take some space (adjust column index if needed)
+
 
         search_frame = ctk.CTkFrame(tab, corner_radius=10)
         search_frame.pack(pady=(0,15), padx=15, fill="x")
 
-        ctk.CTkLabel(search_frame, text="🔍 Search Books:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10)
-        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Type to search title or author...", font=BODY_FONT, width=300)
+        ctk.CTkLabel(search_frame, text="🔍 Buscar Libros:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10) # Translated
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Escribe para buscar por título o autor...", font=BODY_FONT, width=300) # Translated
         self.search_entry.pack(side="left", padx=(0,10), pady=10, expand=True, fill="x")
 
         search_icon = self.load_icon("search")
-        search_button = ctk.CTkButton(search_frame, text="Search", image=search_icon, font=BUTTON_FONT, command=self.search_books_ui, width=100, corner_radius=8)
+        search_button = ctk.CTkButton(search_frame, text="Buscar", image=search_icon, font=BUTTON_FONT, command=self.search_books_ui, width=100, corner_radius=8) # Translated
         search_button.pack(side="left", padx=(0,5), pady=10)
 
         clear_search_icon = self.load_icon("clear_search")
-        clear_search_button = ctk.CTkButton(search_frame, text="Clear", image=clear_search_icon, font=BUTTON_FONT, command=self.clear_search_ui, width=80, corner_radius=8, fg_color="gray50", hover_color="gray60")
+        clear_search_button = ctk.CTkButton(search_frame, text="Limpiar", image=clear_search_icon, font=BUTTON_FONT, command=self.clear_search_ui, width=80, corner_radius=8, fg_color="gray50", hover_color="gray60") # Translated
         clear_search_button.pack(side="left", padx=(0,10), pady=10)
 
-        self.book_list_frame = ctk.CTkScrollableFrame(tab, label_text="Our Wonderful Book Collection!", label_font=HEADING_FONT, corner_radius=10)
+        self.book_list_frame = ctk.CTkScrollableFrame(tab, label_text="Nuestra Maravillosa Colección de Libros", label_font=HEADING_FONT, corner_radius=10) # Translated
         self.book_list_frame.pack(expand=True, fill="both", padx=15, pady=(0,15))
 
         self.refresh_book_list_ui()
@@ -308,66 +327,70 @@ class App(ctk.CTk):
         for widget in self.book_list_frame.winfo_children():
             widget.destroy()
 
-        classroom = self.view_classroom_filter.get() if hasattr(self, 'view_classroom_filter') else "All"
-        status_filter_val = self.view_status_filter.get() if hasattr(self, 'view_status_filter') else "All"
+        ubicacion_val = self.view_ubicacion_filter.get() if hasattr(self, 'view_ubicacion_filter') else "Todos" # Changed variable name and default
 
         if books_to_display is None:
             books = book_manager.get_all_books_db(
-                classroom_filter=classroom if classroom != "All" else None,
-                status_filter=status_filter_val if status_filter_val != "All" else None
+                ubicacion_filter=ubicacion_val if ubicacion_val != "Todos" else None # Changed "All" to "Todos"
             )
         else:
             books = books_to_display
 
         if not books:
-            no_books_label = ctk.CTkLabel(self.book_list_frame, text="Hmm, no books found here. Try changing filters or adding new books! 🧐", font=BODY_FONT)
+            no_books_label = ctk.CTkLabel(self.book_list_frame, text="No se encontraron libros. Intenta cambiar los filtros o añadir nuevos libros.", font=BODY_FONT) # Translated
             no_books_label.pack(pady=30, padx=10)
             return
 
         for i, book in enumerate(books):
             book_item_frame = ctk.CTkFrame(self.book_list_frame, corner_radius=6, border_width=1, border_color=("gray75", "gray30"))
             book_item_frame.pack(fill="x", pady=8, padx=8)
+            book_item_frame.columnconfigure(1, weight=1)
 
-            # Basic grid layout for book item
-            book_item_frame.columnconfigure(1, weight=1) # Allow details column to expand
+            available_count = book_manager.get_available_book_count(book['id'])
+            total_count = book.get('cantidad_total', 0)
 
-            # Status Indicator (simple colored text for now)
-            status_text = book.get('status', 'N/A').capitalize()
-            status_color = "green" if status_text == "Available" else "orange" if status_text == "Borrowed" else ("#333333", "#DCE4EE") # Dark gray / Light gray
+            availability_text = f"Disponible: {available_count} / {total_count}"
+            availability_color = "green" if available_count > 0 else "red"
 
-            status_label = ctk.CTkLabel(book_item_frame, text=f"● {status_text}", font=(APP_FONT_FAMILY, 11, "bold"), text_color=status_color, anchor="e")
+            status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(APP_FONT_FAMILY, 11, "bold"), text_color=availability_color, anchor="e")
             status_label.grid(row=0, column=2, padx=(5,10), pady=(5,0), sticky="ne")
 
-            title_label = ctk.CTkLabel(book_item_frame, text=f"{book['title']}", font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
+            title_label = ctk.CTkLabel(book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
             title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=(5,2), sticky="w")
 
-            author_label = ctk.CTkLabel(book_item_frame, text=f"by {book['author']}", font=(APP_FONT_FAMILY, 11, "italic"), anchor="w")
+            author_label = ctk.CTkLabel(book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 11, "italic"), anchor="w")
             author_label.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky="w")
 
-            info_text = f"Classroom: {book['classroom']}"
-            if book.get('isbn'):
-                info_text += f"  |  ISBN: {book['isbn']}"
+            info_text = f"Ubicación: {book.get('ubicacion', 'N/A')}"
+            if book.get('genero'):
+                info_text += f"  |  Género: {book.get('genero')}"
             info_label = ctk.CTkLabel(book_item_frame, text=info_text, font=(APP_FONT_FAMILY, 10), anchor="w")
             info_label.grid(row=2, column=0, columnspan=3, padx=10, pady=(0,8), sticky="w")
 
-            if book.get('image_path'):
-                img_path_label = ctk.CTkLabel(book_item_frame, text=f"🖼️ Cover: {book['image_path']}", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray50", anchor="w")
-                img_path_label.grid(row=3, column=0, columnspan=3, padx=10, pady=(0,5), sticky="w")
-
+            # Removed image_path display for now as it's not in the new schema
 
     def search_books_ui(self):
         query = self.search_entry.get()
         if not query:
-            self.refresh_book_list_ui()
+            self.refresh_book_list_ui() # Show all if query is empty
             return
 
-        results_title = book_manager.search_books_db(query, "title")
-        results_author = book_manager.search_books_db(query, "author")
+        # Search by title and author, then combine results
+        # book_manager.search_books_db now defaults to "titulo" if field not specified
+        results_titulo = book_manager.search_books_db(query, search_field="titulo")
+        results_autor = book_manager.search_books_db(query, search_field="autor")
+        # Potentially search by genero and ubicacion as well if desired by product
+        # results_genero = book_manager.search_books_db(query, search_field="genero")
+        # results_ubicacion = book_manager.search_books_db(query, search_field="ubicacion")
 
-        combined_results = {book['id']: book for book in results_title}
-        for book in results_author:
-            if book['id'] not in combined_results:
-                combined_results[book['id']] = book
+        # Combine results, avoiding duplicates
+        combined_results = {book['id']: book for book in results_titulo}
+        for book in results_autor:
+            combined_results[book['id']] = book
+        # for book in results_genero:
+        #     combined_results[book['id']] = book
+        # for book in results_ubicacion:
+        #     combined_results[book['id']] = book
 
         self.refresh_book_list_ui(books_to_display=list(combined_results.values()))
 
@@ -377,30 +400,30 @@ class App(ctk.CTk):
 
     def setup_manage_students_tab(self):
         tab = self.manage_students_tab
-        tab.configure(fg_color=("#FAF0E6", "#2E2B28")) # Linen for light, dark brown/gray for dark
+        tab.configure(fg_color=("#FAF0E6", "#2E2B28"))
 
         add_student_frame = ctk.CTkFrame(tab, corner_radius=10)
         add_student_frame.pack(pady=15, padx=15, fill="x")
 
-        ctk.CTkLabel(add_student_frame, text="🌟 Add a New Student Star! 🌟", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15))
+        ctk.CTkLabel(add_student_frame, text="🌟 ¡Añade un Nuevo Alumno Estrella! 🌟", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15)) # Translated
 
-        ctk.CTkLabel(add_student_frame, text="Student Name:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=8, sticky="w")
-        self.student_name_entry = ctk.CTkEntry(add_student_frame, width=300, font=BODY_FONT, placeholder_text="e.g., Luna Lovegood")
+        ctk.CTkLabel(add_student_frame, text="Nombre del Alumno:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=8, sticky="w") # Translated
+        self.student_name_entry = ctk.CTkEntry(add_student_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Luna Lovegood") # Translated
         self.student_name_entry.grid(row=1, column=1, padx=10, pady=8, sticky="ew")
 
-        ctk.CTkLabel(add_student_frame, text="Classroom:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=8, sticky="w")
-        self.student_classroom_combo = ctk.CTkComboBox(add_student_frame, values=["Class A", "Class B", "Class C", "Class D"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT)
+        ctk.CTkLabel(add_student_frame, text="Clase:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=8, sticky="w") # Translated "Classroom" to "Clase"
+        self.student_classroom_combo = ctk.CTkComboBox(add_student_frame, values=["Clase A", "Clase B", "Clase C", "Clase D"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Translated values
         self.student_classroom_combo.grid(row=2, column=1, padx=10, pady=8, sticky="ew")
-        self.student_classroom_combo.set("Class A")
+        self.student_classroom_combo.set("Clase A") # Translated
 
-        ctk.CTkLabel(add_student_frame, text="Role:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=8, sticky="w")
-        self.student_role_combo = ctk.CTkComboBox(add_student_frame, values=["student", "leader"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT)
+        ctk.CTkLabel(add_student_frame, text="Rol:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=8, sticky="w") # Translated
+        self.student_role_combo = ctk.CTkComboBox(add_student_frame, values=["alumno", "líder", "admin"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Translated values
         self.student_role_combo.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
-        self.student_role_combo.set("student")
+        self.student_role_combo.set("alumno") # Translated
         add_student_frame.columnconfigure(1, weight=1)
 
-        add_student_icon = self.load_icon("add_student") # Example: assets/icons/add_student.png
-        add_student_button = ctk.CTkButton(add_student_frame, text="Add Student", image=add_student_icon, font=BUTTON_FONT, command=self.add_student_ui, corner_radius=8)
+        add_student_icon = self.load_icon("add_student")
+        add_student_button = ctk.CTkButton(add_student_frame, text="Añadir Alumno", image=add_student_icon, font=BUTTON_FONT, command=self.add_student_ui, corner_radius=8) # Translated
         add_student_button.grid(row=4, column=0, columnspan=2, pady=15, padx=10, sticky="ew")
 
         students_list_frame_container = ctk.CTkFrame(tab, corner_radius=10)
@@ -408,12 +431,12 @@ class App(ctk.CTk):
 
         list_header_frame = ctk.CTkFrame(students_list_frame_container, fg_color="transparent")
         list_header_frame.pack(fill="x", pady=(5,0))
-        ctk.CTkLabel(list_header_frame, text="🎓 Our Awesome Students 🎓", font=HEADING_FONT).pack(side="left", padx=10, pady=5)
+        ctk.CTkLabel(list_header_frame, text="🎓 Nuestros Increíbles Alumnos 🎓", font=HEADING_FONT).pack(side="left", padx=10, pady=5) # Translated
         refresh_students_icon = self.load_icon("refresh")
-        refresh_students_button = ctk.CTkButton(list_header_frame, text="Refresh", image=refresh_students_icon, font=BUTTON_FONT, command=self.refresh_student_list_ui, width=100, corner_radius=8)
+        refresh_students_button = ctk.CTkButton(list_header_frame, text="Actualizar", image=refresh_students_icon, font=BUTTON_FONT, command=self.refresh_student_list_ui, width=100, corner_radius=8) # Translated
         refresh_students_button.pack(side="right", padx=10, pady=5)
 
-        self.students_list_frame = ctk.CTkScrollableFrame(students_list_frame_container, label_text="") # Label is now part of header_frame
+        self.students_list_frame = ctk.CTkScrollableFrame(students_list_frame_container, label_text="")
         self.students_list_frame.pack(expand=True, fill="both", padx=10, pady=10)
 
         self.refresh_student_list_ui()
@@ -424,18 +447,18 @@ class App(ctk.CTk):
         role = self.student_role_combo.get()
 
         if not name or not classroom or not role:
-            messagebox.showerror("Wait a Second! 🚦", "Oops! Name, Classroom, and Role are required to add a student.")
+            messagebox.showerror("¡Un Segundo! 🚦", "¡Uy! Nombre, Clase y Rol son requeridos para añadir un alumno.") # Translated
             return
 
-        student_id = student_manager.add_student_db(name, classroom, role)
+        student_id = student_manager.add_student_db(name, classroom, role) # Assuming student_manager.add_student_db handles 'alumno', 'líder'
         if student_id:
-            messagebox.showinfo("Fantastic! ✨", f"Student '{name}' has joined the roster!")
+            messagebox.showinfo("¡Fantástico! ✨", f"¡El alumno '{name}' se ha unido al listado!") # Translated
             self.student_name_entry.delete(0, "end")
             self.refresh_student_list_ui()
             if hasattr(self, 'refresh_leader_selector_combo'):
                  self.refresh_leader_selector_combo()
         else:
-            messagebox.showerror("Oh Dear! 💔", "Something went wrong adding the student. Please check the console.")
+            messagebox.showerror("¡Oh No! 💔", "Algo salió mal al añadir el alumno. Revisa la consola.") # Translated
 
     def refresh_student_list_ui(self):
         if not hasattr(self, 'students_list_frame'):
@@ -447,14 +470,14 @@ class App(ctk.CTk):
         students = student_manager.get_students_db()
 
         if not students:
-            no_students_label = ctk.CTkLabel(self.students_list_frame, text="No students found.", font=ctk.CTkFont(size=14))
+            no_students_label = ctk.CTkLabel(self.students_list_frame, text="No se encontraron alumnos.", font=ctk.CTkFont(size=14)) # Translated
             no_students_label.pack(pady=20)
             return
 
         for i, student in enumerate(students):
             student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             student_item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Name: {student['name']} ({student['role']})\nClassroom: {student['classroom']} | ID: {student['id']}" # Show ID for now
+            details = f"Nombre: {student['name']} ({student['role']})\nClase: {student['classroom']} | ID: {student['id']}" # Translated
             label = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w")
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
@@ -471,7 +494,7 @@ class App(ctk.CTk):
         # --- Student Leader Selection ---
         leader_selection_frame = ctk.CTkFrame(tab, corner_radius=10)
         leader_selection_frame.pack(pady=15, padx=15, fill="x")
-        ctk.CTkLabel(leader_selection_frame, text="👑 Select Acting Student Leader:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10)
+        ctk.CTkLabel(leader_selection_frame, text="👑 Seleccionar Líder Estudiantil Actuante:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10) # Translated
         self.leader_selector_combo = ctk.CTkComboBox(leader_selection_frame, width=300, font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_leader_selected)
         self.leader_selector_combo.pack(side="left", padx=(0,10), pady=10, expand=True)
 
@@ -485,37 +508,37 @@ class App(ctk.CTk):
         # --- Lend Book Section ---
         lend_frame = ctk.CTkFrame(left_frame, corner_radius=8)
         lend_frame.pack(pady=(0,10), padx=10, fill="x")
-        ctk.CTkLabel(lend_frame, text="➡️ Lend a Book", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w")
+        ctk.CTkLabel(lend_frame, text="➡️ Prestar un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # Translated
 
-        ctk.CTkLabel(lend_frame, text="Book:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w")
+        ctk.CTkLabel(lend_frame, text="Libro:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated
         self.lend_book_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
         self.lend_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
 
-        ctk.CTkLabel(lend_frame, text="Borrower:", font=BODY_FONT).grid(row=2, column=0, padx=5, pady=8, sticky="w")
+        ctk.CTkLabel(lend_frame, text="Prestatario:", font=BODY_FONT).grid(row=2, column=0, padx=5, pady=8, sticky="w") # Translated "Borrower"
         self.borrower_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
         self.borrower_combo.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
 
-        ctk.CTkLabel(lend_frame, text="Due Date:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w")
+        ctk.CTkLabel(lend_frame, text="Fecha de Devolución:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w") # Translated "Due Date"
         self.due_date_entry = ctk.CTkEntry(lend_frame, placeholder_text=(datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d'), width=280, font=BODY_FONT)
         self.due_date_entry.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
         lend_frame.columnconfigure(1, weight=1)
 
         lend_icon = self.load_icon("lend_book")
-        lend_button = ctk.CTkButton(lend_frame, text="Lend Book", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8)
+        lend_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
         lend_button.grid(row=4, column=0, columnspan=2, pady=15, sticky="ew")
 
         # --- Return Book Section ---
         return_frame = ctk.CTkFrame(left_frame, corner_radius=8)
         return_frame.pack(pady=10, padx=10, fill="x")
-        ctk.CTkLabel(return_frame, text="⬅️ Return a Book", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w")
+        ctk.CTkLabel(return_frame, text="⬅️ Devolver un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # Translated
 
-        ctk.CTkLabel(return_frame, text="Book:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Text changed for clarity
+        ctk.CTkLabel(return_frame, text="Libro Prestado:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated "Book:" to "Libro Prestado:" for clarity
         self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
         self.return_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
         return_frame.columnconfigure(1, weight=1)
 
         return_icon = self.load_icon("return_book")
-        return_button = ctk.CTkButton(return_frame, text="Return Book", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8)
+        return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Translated
         return_button.grid(row=2, column=0, columnspan=2, pady=15, sticky="ew")
 
         right_frame = ctk.CTkFrame(main_loan_content_frame, fg_color="transparent")
@@ -524,18 +547,18 @@ class App(ctk.CTk):
         loans_display_tabview = ctk.CTkTabview(right_frame, corner_radius=8)
         loans_display_tabview.pack(expand=True, fill="both")
 
-        current_loans_tab = loans_display_tabview.add("Current Loans")
-        reminders_tab = loans_display_tabview.add("⏰ Reminders")
+        current_loans_tab = loans_display_tabview.add("Préstamos Actuales") # Translated
+        reminders_tab = loans_display_tabview.add("⏰ Recordatorios") # Translated
         current_loans_tab.configure(fg_color=("#F5F5F5", "#343638"))
         reminders_tab.configure(fg_color=("#FFF0F5", "#383436"))
 
 
-        self.current_loans_label = ctk.CTkLabel(current_loans_tab, text="Current Loans in [Select Leader's Classroom]", font=SUBHEADING_FONT)
+        self.current_loans_label = ctk.CTkLabel(current_loans_tab, text="Préstamos Actuales en [Clase del Líder]", font=SUBHEADING_FONT) # Translated
         self.current_loans_label.pack(pady=10, padx=10)
         self.current_loans_frame = ctk.CTkScrollableFrame(current_loans_tab, label_text="", corner_radius=6)
         self.current_loans_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
 
-        self.reminders_label = ctk.CTkLabel(reminders_tab, text="Books Due Soon/Overdue in [Select Leader's Classroom]", font=SUBHEADING_FONT)
+        self.reminders_label = ctk.CTkLabel(reminders_tab, text="Libros Próximos a Vencer/Vencidos en [Clase del Líder]", font=SUBHEADING_FONT) # Translated
         self.reminders_label.pack(pady=10, padx=10)
         self.reminders_frame = ctk.CTkScrollableFrame(reminders_tab, label_text="", corner_radius=6)
         self.reminders_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
@@ -544,31 +567,31 @@ class App(ctk.CTk):
 
     def refresh_leader_selector_combo(self):
         leaders = student_manager.get_students_db(role_filter='leader')
-        self.leader_student_map = {f"{s['name']} ({s['classroom']})": s['id'] for s in leaders}
+        self.leader_student_map = {f"{s['name']} ({s['classroom']})": s['id'] for s in leaders} # classroom here refers to student's classroom
         leader_names = list(self.leader_student_map.keys())
 
         current_value = self.leader_selector_combo.get()
 
-        self.leader_selector_combo.configure(values=leader_names if leader_names else ["No leaders found"])
+        self.leader_selector_combo.configure(values=leader_names if leader_names else ["No hay líderes"]) # Translated
 
         if leader_names:
-            if current_value in leader_names: # Maintain current selection if still valid
+            if current_value in leader_names:
                 self.leader_selector_combo.set(current_value)
-            else: # Default to first leader if current is invalid or no selection
+            else:
                 self.leader_selector_combo.set(leader_names[0])
             self.on_leader_selected(self.leader_selector_combo.get())
         else:
-            self.leader_selector_combo.set("No leaders found")
+            self.leader_selector_combo.set("No hay líderes") # Translated
             self.on_leader_selected(None)
 
     def on_leader_selected(self, selected_leader_display_name):
-        if selected_leader_display_name and selected_leader_display_name != "No leaders found":
+        if selected_leader_display_name and selected_leader_display_name != "No hay líderes": # Translated
             self.current_leader_id = self.leader_student_map.get(selected_leader_display_name)
             leader_details = student_manager.get_student_by_id_db(self.current_leader_id)
             if leader_details:
-                self.current_leader_classroom = leader_details['classroom']
-                self.current_loans_label.configure(text=f"Current Loans in {self.current_leader_classroom}")
-                self.reminders_label.configure(text=f"Books Due Soon/Overdue in {self.current_leader_classroom}")
+                self.current_leader_classroom = leader_details['classroom'] # This is the leader's classroom, used as ubicacion for books
+                self.current_loans_label.configure(text=f"Préstamos Actuales en {self.current_leader_classroom}") # Translated
+                self.reminders_label.configure(text=f"Libros Próximos a Vencer/Vencidos en {self.current_leader_classroom}") # Translated
                 self.lend_book_combo.configure(state="normal")
                 self.borrower_combo.configure(state="normal")
                 self.return_book_combo.configure(state="normal")
@@ -577,48 +600,64 @@ class App(ctk.CTk):
                 self.current_leader_classroom = None
         else:
             self.current_leader_id = None
-            self.current_leader_classroom = None
+                self.current_leader_classroom = None # Used as ubicacion for books
 
-        self.refresh_loan_related_combos_and_lists() # This will call update_loan_section_for_no_leader if needed
+        self.refresh_loan_related_combos_and_lists()
 
     def update_loan_section_for_no_leader(self):
-        self.current_loans_label.configure(text="Current Loans (Select a Leader)")
-        self.reminders_label.configure(text="Reminders (Select a Leader)")
-        self.lend_book_combo.configure(values=["Select leader"], state="disabled")
-        self.borrower_combo.configure(values=["Select leader"], state="disabled")
-        self.return_book_combo.configure(values=["Select leader"], state="disabled")
-        self.lend_book_combo.set("Select leader")
-        self.borrower_combo.set("Select leader")
-        self.return_book_combo.set("Select leader")
+        self.current_loans_label.configure(text="Préstamos Actuales (Seleccione un Líder)") # Translated
+        self.reminders_label.configure(text="Recordatorios (Seleccione un Líder)") # Translated
+        self.lend_book_combo.configure(values=["Seleccione líder"], state="disabled") # Translated
+        self.borrower_combo.configure(values=["Seleccione líder"], state="disabled") # Translated
+        self.return_book_combo.configure(values=["Seleccione líder"], state="disabled") # Translated
+        self.lend_book_combo.set("Seleccione líder") # Translated
+        self.borrower_combo.set("Seleccione líder") # Translated
+        self.return_book_combo.set("Seleccione líder") # Translated
 
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
-        ctk.CTkLabel(self.current_loans_frame, text="Please select a student leader to manage loans.").pack(pady=20, padx=10)
+        ctk.CTkLabel(self.current_loans_frame, text="Por favor, seleccione un líder estudiantil para gestionar préstamos.").pack(pady=20, padx=10) # Translated
         for widget in self.reminders_frame.winfo_children(): widget.destroy()
-        ctk.CTkLabel(self.reminders_frame, text="Please select a student leader to see reminders.").pack(pady=20, padx=10)
+        ctk.CTkLabel(self.reminders_frame, text="Por favor, seleccione un líder estudiantil para ver recordatorios.").pack(pady=20, padx=10) # Translated
 
     def refresh_loan_related_combos_and_lists(self):
-        if not self.current_leader_id or not self.current_leader_classroom:
+        if not self.current_leader_id or not self.current_leader_classroom: # current_leader_classroom is the ubicacion
             self.update_loan_section_for_no_leader()
             return
 
         # Populate Lend Book ComboBox
-        available_books = book_manager.get_all_books_db(classroom_filter=self.current_leader_classroom, status_filter='available')
-        self.lend_book_map = {f"{b['title']} (by {b['author']})": b['id'] for b in available_books}
-        lend_book_display_names = list(self.lend_book_map.keys())
+        # Books from the selected leader's ubicacion
+        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=self.current_leader_classroom)
+
+        lend_book_display_names = []
+        self.lend_book_map = {}
+        for book in all_books_in_ubicacion:
+            available_count = book_manager.get_available_book_count(book['id'])
+            if available_count > 0:
+                display_text = f"{book.get('titulo', 'N/A')} (by {book.get('autor', 'N/A')}) - Disp: {available_count}"
+                self.lend_book_map[display_text] = book['id']
+                lend_book_display_names.append(display_text)
+
         self.lend_book_combo.configure(values=lend_book_display_names if lend_book_display_names else ["No available books"])
         self.lend_book_combo.set(lend_book_display_names[0] if lend_book_display_names else "No available books")
 
         # Populate Borrower ComboBox
-        students_in_classroom = student_manager.get_students_by_classroom_db(self.current_leader_classroom)
+        students_in_classroom = student_manager.get_students_by_classroom_db(self.current_leader_classroom) # Assuming classroom is equivalent to ubicacion for students
         self.borrower_student_map = {s['name']: s['id'] for s in students_in_classroom}
         borrower_names = list(self.borrower_student_map.keys())
         self.borrower_combo.configure(values=borrower_names if borrower_names else ["No students in class"])
         self.borrower_combo.set(borrower_names[0] if borrower_names else "No students in class")
 
         # Populate Return Book ComboBox
-        borrowed_books_in_class = book_manager.get_current_loans_db(classroom_filter=self.current_leader_classroom)
-        self.return_book_map = {f"{b['title']} (Borrower: {b.get('borrower_name', 'N/A')})": b['id'] for b in borrowed_books_in_class}
-        return_book_display_names = list(self.return_book_map.keys())
+        # Using current_leader_classroom as the ubicacion_filter for get_current_loans_db
+        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
+        self.return_book_map = {}
+        return_book_display_names = []
+        for loan in active_loans_in_ubicacion:
+            # loan dict now contains 'titulo', 'borrower_name', 'due_date', 'loan_id'
+            display_text = f"{loan.get('titulo', 'N/A')} (Borrower: {loan.get('borrower_name', 'N/A')}) Due: {loan.get('due_date', 'N/A')}"
+            self.return_book_map[display_text] = loan['loan_id'] # Map display text to loan_id
+            return_book_display_names.append(display_text)
+
         self.return_book_combo.configure(values=return_book_display_names if return_book_display_names else ["No borrowed books"])
         self.return_book_combo.set(return_book_display_names[0] if return_book_display_names else "No borrowed books")
 
@@ -642,6 +681,8 @@ class App(ctk.CTk):
             messagebox.showerror("Input Error", "Due date is required.")
             return
         try:
+            # Validate due_date_str format, but allow it to be in the past for flexibility if needed,
+            # though typically it should be in the future.
             datetime.strptime(due_date_str, '%Y-%m-%d')
         except ValueError:
             messagebox.showerror("Input Error", "Invalid date format for Due Date. Use YYYY-MM-DD.")
@@ -651,59 +692,64 @@ class App(ctk.CTk):
         borrower_id = self.borrower_student_map.get(borrower_display_name)
 
         if not book_id or not borrower_id:
-            messagebox.showerror("Internal Error", "Could not resolve book or borrower ID.")
+            messagebox.showerror("Internal Error", "Could not resolve book or borrower ID from selection.")
             return
 
+        # Call the updated book_manager.loan_book_db
         success = book_manager.loan_book_db(book_id, borrower_id, due_date_str, self.current_leader_id)
+
         if success:
             messagebox.showinfo("Success", f"Book '{book_display_name.split(' (by ')[0]}' loaned to {borrower_display_name}.")
             self.due_date_entry.delete(0, 'end') # Clear entry for next use
             self.refresh_loan_related_combos_and_lists()
-            if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui() # Update main book list
+            if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
         else:
-            messagebox.showerror("Loan Failed", "Failed to loan book. See console for details (e.g., book not available, student/leader invalid).")
+            messagebox.showerror("Loan Failed", "Failed to loan book. Check console (book might not be available or other DB error).")
 
     def return_book_ui(self):
         if not self.current_leader_id:
             messagebox.showerror("Leader Not Selected", "Please select a student leader first.")
             return
 
-        return_book_display_name = self.return_book_combo.get()
-        if return_book_display_name == "No borrowed books":
-            messagebox.showerror("Input Error", "Please select a book to return.")
+        return_loan_display_name = self.return_book_combo.get()
+        if return_loan_display_name == "No borrowed books":
+            messagebox.showerror("Input Error", "Please select a loan to return.")
             return
 
-        book_id = self.return_book_map.get(return_book_display_name)
-        if not book_id:
-            messagebox.showerror("Internal Error", "Could not resolve book ID for return.")
+        loan_id = self.return_book_map.get(return_loan_display_name) # Get loan_id
+        if not loan_id:
+            messagebox.showerror("Internal Error", "Could not resolve loan ID for return from selection.")
             return
 
-        success = book_manager.return_book_db(book_id, self.current_leader_id)
+        # Call the updated book_manager.return_book_db with loan_id
+        success = book_manager.return_book_db(loan_id, self.current_leader_id)
+
         if success:
-            messagebox.showinfo("Success", f"Book returned successfully.")
+            messagebox.showinfo("Success", f"Loan returned successfully.")
             self.refresh_loan_related_combos_and_lists()
-            if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui() # Update main book list
+            if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
         else:
-            messagebox.showerror("Return Failed", "Failed to return book. See console for details (e.g., book not borrowed, leader invalid).")
+            messagebox.showerror("Return Failed", "Failed to return book. Check console (loan ID might be invalid or other DB error).")
 
     def refresh_current_loans_list(self):
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
 
-        if not self.current_leader_classroom: # No leader selected or leader has no classroom
+        if not self.current_leader_classroom:
              ctk.CTkLabel(self.current_loans_frame, text="Select a leader to view loans.").pack(pady=20, padx=10)
              return
 
-        loans = book_manager.get_current_loans_db(classroom_filter=self.current_leader_classroom)
+        # Use current_leader_classroom as ubicacion_filter
+        loans = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
         if not loans:
             ctk.CTkLabel(self.current_loans_frame, text=f"No books currently loaned out in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
 
-        for i, loan in enumerate(loans):
+        for i, loan in enumerate(loans): # loan is now a dict from get_current_loans_db
             item_frame = ctk.CTkFrame(self.current_loans_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Book: {loan['title']} (ISBN: {loan.get('isbn', 'N/A')})\n" \
-                      f"Borrower: {loan.get('borrower_name', 'Unknown')}\n" \
-                      f"Due Date: {loan['due_date']}"
+            details = f"Book: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
+                      f"Borrower: {loan.get('borrower_name', 'Unknown Student')}\n" \
+                      f"Loaned: {loan.get('loan_date', 'N/A')} | Due: {loan.get('due_date', 'N/A')} (ID: {loan.get('loan_id', '')[:8]}...)"
             label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w")
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
@@ -714,8 +760,9 @@ class App(ctk.CTk):
             ctk.CTkLabel(self.reminders_frame, text="Select a leader to view reminders.").pack(pady=20, padx=10)
             return
 
-        due_soon_books = book_manager.get_books_due_soon_db(days_threshold=7, classroom_filter=self.current_leader_classroom)
-        if not due_soon_books:
+        # Use current_leader_classroom as ubicacion_filter
+        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=self.current_leader_classroom)
+        if not due_soon_loans:
             ctk.CTkLabel(self.reminders_frame, text=f"No books due soon or overdue in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
 
@@ -742,7 +789,7 @@ class App(ctk.CTk):
     # --- USER MANAGEMENT TAB ---
     def setup_manage_users_tab(self):
         tab = self.manage_users_tab
-        tab.configure(fg_color=("#E9E9E9", "#3B3B3B")) # Neutral gray
+        tab.configure(fg_color=("#E9E9E9", "#3B3B3B"))
 
         # Main frame for the tab
         main_frame = ctk.CTkFrame(tab, fg_color="transparent")
@@ -752,45 +799,43 @@ class App(ctk.CTk):
         add_user_outer_frame = ctk.CTkFrame(main_frame, corner_radius=10)
         add_user_outer_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(add_user_outer_frame, text="➕ Add New User / Edit User", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,15), padx=10)
+        ctk.CTkLabel(add_user_outer_frame, text="➕ Añadir Nuevo Usuario / Editar Usuario", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,15), padx=10) # Translated
 
-        ctk.CTkLabel(add_user_outer_frame, text="Name:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=8, sticky="w")
-        self.um_name_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, placeholder_text="Full Name")
+        ctk.CTkLabel(add_user_outer_frame, text="Nombre:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=8, sticky="w") # Translated
+        self.um_name_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, placeholder_text="Nombre Completo") # Translated
         self.um_name_entry.grid(row=1, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
 
-        ctk.CTkLabel(add_user_outer_frame, text="Password:", font=BODY_FONT).grid(row=2, column=0, padx=(10,5), pady=8, sticky="w")
-        self.um_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Enter password")
+        ctk.CTkLabel(add_user_outer_frame, text="Contraseña:", font=BODY_FONT).grid(row=2, column=0, padx=(10,5), pady=8, sticky="w") # Translated
+        self.um_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Introducir contraseña") # Translated
         self.um_password_entry.grid(row=2, column=1, padx=(0,5), pady=8, sticky="ew")
 
-        ctk.CTkLabel(add_user_outer_frame, text="Confirm:", font=BODY_FONT).grid(row=3, column=0, padx=(10,5), pady=8, sticky="w")
-        self.um_confirm_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Confirm password")
+        ctk.CTkLabel(add_user_outer_frame, text="Confirmar:", font=BODY_FONT).grid(row=3, column=0, padx=(10,5), pady=8, sticky="w") # Translated
+        self.um_confirm_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Confirmar contraseña") # Translated
         self.um_confirm_password_entry.grid(row=3, column=1, padx=(0,5), pady=8, sticky="ew")
 
-        # Toggle password visibility (Optional - can be added later if desired)
         # self.um_show_password_var = ctk.StringVar(value="off")
-        # show_password_check = ctk.CTkCheckBox(add_user_outer_frame, text="Show", variable=self.um_show_password_var, onvalue="on", offvalue="off", command=self.um_toggle_password_visibility, font=BODY_FONT)
+        # show_password_check = ctk.CTkCheckBox(add_user_outer_frame, text="Mostrar", variable=self.um_show_password_var, onvalue="on", offvalue="off", command=self.um_toggle_password_visibility, font=BODY_FONT) # Translated "Show"
         # show_password_check.grid(row=2, column=2, rowspan=2, padx=(0,10), pady=8, sticky="w")
 
-
-        ctk.CTkLabel(add_user_outer_frame, text="Classroom:", font=BODY_FONT).grid(row=4, column=0, padx=(10,5), pady=8, sticky="w")
-        self.um_classroom_combo = ctk.CTkComboBox(add_user_outer_frame, values=["Class A", "Class B", "Class C", "Class D", "AdminOffice"], font=BODY_FONT, dropdown_font=BODY_FONT)
+        ctk.CTkLabel(add_user_outer_frame, text="Clase/Oficina:", font=BODY_FONT).grid(row=4, column=0, padx=(10,5), pady=8, sticky="w") # Translated "Classroom"
+        self.um_classroom_combo = ctk.CTkComboBox(add_user_outer_frame, values=["Clase A", "Clase B", "Clase C", "Clase D", "OficinaAdmin"], font=BODY_FONT, dropdown_font=BODY_FONT) # Translated "AdminOffice", other values might need translation
         self.um_classroom_combo.grid(row=4, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
-        self.um_classroom_combo.set("Class A")
+        self.um_classroom_combo.set("Clase A") # Default
 
-        ctk.CTkLabel(add_user_outer_frame, text="Role:", font=BODY_FONT).grid(row=5, column=0, padx=(10,5), pady=8, sticky="w")
-        self.um_role_combo = ctk.CTkComboBox(add_user_outer_frame, values=["student", "leader", "admin"], font=BODY_FONT, dropdown_font=BODY_FONT)
+        ctk.CTkLabel(add_user_outer_frame, text="Rol:", font=BODY_FONT).grid(row=5, column=0, padx=(10,5), pady=8, sticky="w") # Translated
+        self.um_role_combo = ctk.CTkComboBox(add_user_outer_frame, values=["alumno", "líder", "admin"], font=BODY_FONT, dropdown_font=BODY_FONT) # Translated
         self.um_role_combo.grid(row=5, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
-        self.um_role_combo.set("student")
+        self.um_role_combo.set("alumno") # Translated
 
-        add_user_outer_frame.columnconfigure(1, weight=1) # Make entry column expandable
+        add_user_outer_frame.columnconfigure(1, weight=1)
 
-        self.um_add_user_button = ctk.CTkButton(add_user_outer_frame, text="Add User", font=BUTTON_FONT, command=self.add_user_ui, corner_radius=8)
+        self.um_add_user_button = ctk.CTkButton(add_user_outer_frame, text="Añadir Usuario", font=BUTTON_FONT, command=self.add_user_ui, corner_radius=8) # Translated
         self.um_add_user_button.grid(row=6, column=0, padx=(10,5), pady=15, sticky="ew")
 
-        self.um_update_user_button = ctk.CTkButton(add_user_outer_frame, text="Update Selected User", font=BUTTON_FONT, command=self.edit_user_ui, corner_radius=8, state="disabled")
+        self.um_update_user_button = ctk.CTkButton(add_user_outer_frame, text="Actualizar Usuario Seleccionado", font=BUTTON_FONT, command=self.edit_user_ui, corner_radius=8, state="disabled") # Translated
         self.um_update_user_button.grid(row=6, column=1, padx=(5,5), pady=15, sticky="ew")
 
-        self.um_clear_form_button = ctk.CTkButton(add_user_outer_frame, text="Clear Form", font=BUTTON_FONT, command=self.clear_user_form_ui, corner_radius=8, fg_color="gray50", hover_color="gray60")
+        self.um_clear_form_button = ctk.CTkButton(add_user_outer_frame, text="Limpiar Formulario", font=BUTTON_FONT, command=self.clear_user_form_ui, corner_radius=8, fg_color="gray50", hover_color="gray60") # Translated
         self.um_clear_form_button.grid(row=6, column=2, padx=(5,10), pady=15, sticky="ew")
 
 
@@ -800,9 +845,9 @@ class App(ctk.CTk):
 
         list_header = ctk.CTkFrame(user_list_container, fg_color="transparent")
         list_header.pack(fill="x", pady=(5,0))
-        ctk.CTkLabel(list_header, text="👥 Registered Users", font=HEADING_FONT).pack(side="left", padx=10, pady=5)
+        ctk.CTkLabel(list_header, text="👥 Usuarios Registrados", font=HEADING_FONT).pack(side="left", padx=10, pady=5) # Translated
         refresh_icon = self.load_icon("refresh")
-        refresh_button = ctk.CTkButton(list_header, text="Refresh List", image=refresh_icon, font=BUTTON_FONT, command=self.refresh_user_list_ui, width=120, corner_radius=8)
+        refresh_button = ctk.CTkButton(list_header, text="Actualizar Lista", image=refresh_icon, font=BUTTON_FONT, command=self.refresh_user_list_ui, width=120, corner_radius=8) # Translated
         refresh_button.pack(side="right", padx=10, pady=5)
 
         self.user_list_scroll_frame = ctk.CTkScrollableFrame(user_list_container, label_text="")
@@ -811,48 +856,48 @@ class App(ctk.CTk):
         # --- User Actions Section (for selected user) ---
         actions_frame = ctk.CTkFrame(main_frame, corner_radius=10)
         actions_frame.pack(pady=10, padx=10, fill="x")
-        ctk.CTkLabel(actions_frame, text="Actions for Selected User:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10)
+        ctk.CTkLabel(actions_frame, text="Acciones para Usuario Seleccionado:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10) # Translated
 
         delete_icon = self.load_icon("delete")
-        self.um_delete_button = ctk.CTkButton(actions_frame, text="Delete", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8)
+        self.um_delete_button = ctk.CTkButton(actions_frame, text="Eliminar", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8) # Translated
         self.um_delete_button.pack(side="left", padx=5, pady=10)
 
-        reset_pass_icon = self.load_icon("reset_password") # You'll need an icon like 'reset_password.png'
-        self.um_reset_password_button = ctk.CTkButton(actions_frame, text="Reset Password", image=reset_pass_icon, font=BUTTON_FONT, command=self.reset_user_password_ui, state="disabled", corner_radius=8)
+        reset_pass_icon = self.load_icon("reset_password")
+        self.um_reset_password_button = ctk.CTkButton(actions_frame, text="Restablecer Contraseña", image=reset_pass_icon, font=BUTTON_FONT, command=self.reset_user_password_ui, state="disabled", corner_radius=8) # Translated
         self.um_reset_password_button.pack(side="left", padx=5, pady=10)
 
-        self.refresh_user_list_ui() # Initial population
+        self.refresh_user_list_ui()
 
     def clear_user_form_ui(self, clear_selection=True):
         self.um_name_entry.delete(0, "end")
         self.um_password_entry.delete(0, "end")
         self.um_confirm_password_entry.delete(0, "end")
-        self.um_classroom_combo.set("Class A") # Reset to default
-        self.um_role_combo.set("student")    # Reset to default
+        self.um_classroom_combo.set("Clase A") # Reset to default (Spanish value)
+        self.um_role_combo.set("alumno")    # Reset to default (Spanish value)
         if clear_selection:
             self.selected_user_id_manage_tab = None
             self.um_delete_button.configure(state="disabled")
             self.um_reset_password_button.configure(state="disabled")
-            self.um_update_user_button.configure(state="disabled", text="Update Selected User")
+            self.um_update_user_button.configure(state="disabled", text="Actualizar Usuario Seleccionado") # Translated
             self.um_add_user_button.configure(state="normal")
-            self.um_name_entry.focus() # Set focus back to name entry
+            self.um_name_entry.focus()
 
     def select_user_for_management(self, user_id, user_data):
         self.selected_user_id_manage_tab = user_id
         self.um_delete_button.configure(state="normal")
         self.um_reset_password_button.configure(state="normal")
-        self.um_update_user_button.configure(state="normal", text=f"Save Changes for {user_data.get('name', '')[:15]}")
-        self.um_add_user_button.configure(state="disabled") # Disable "Add User" when editing
+        self.um_update_user_button.configure(state="normal", text=f"Guardar Cambios para {user_data.get('name', '')[:15]}") # Translated
+        self.um_add_user_button.configure(state="disabled")
 
         # Populate form for editing
         self.um_name_entry.delete(0, "end")
         self.um_name_entry.insert(0, user_data.get('name', ''))
-        self.um_password_entry.delete(0, "end") # Clear password fields for editing
+        self.um_password_entry.delete(0, "end")
         self.um_confirm_password_entry.delete(0, "end")
-        self.um_password_entry.configure(placeholder_text="Enter new password if changing")
-        self.um_confirm_password_entry.configure(placeholder_text="Confirm new password")
-        self.um_classroom_combo.set(user_data.get('classroom', 'Class A'))
-        self.um_role_combo.set(user_data.get('role', 'student'))
+        self.um_password_entry.configure(placeholder_text="Nueva contraseña si cambia") # Translated
+        self.um_confirm_password_entry.configure(placeholder_text="Confirmar nueva contraseña") # Translated
+        self.um_classroom_combo.set(user_data.get('classroom', 'Clase A')) # Ensure Spanish values used if applicable
+        self.um_role_combo.set(user_data.get('role', 'alumno')) # Ensure Spanish values used
 
         # Highlight the selected user in the list (visual feedback)
         for widget in self.user_list_scroll_frame.winfo_children():
@@ -872,7 +917,7 @@ class App(ctk.CTk):
 
         users = student_manager.get_students_db()
         if not users:
-            ctk.CTkLabel(self.user_list_scroll_frame, text="No users found in the system.", font=BODY_FONT).pack(pady=20)
+            ctk.CTkLabel(self.user_list_scroll_frame, text="No hay usuarios en el sistema.", font=BODY_FONT).pack(pady=20) # Translated
             return
 
         for i, user in enumerate(users):
@@ -884,9 +929,9 @@ class App(ctk.CTk):
             item_frame._original_bg = original_bg # Store original color for de-selection
 
             # User details
-            details_text = f"👤 {user['name']} ({user['role']}) - 🏫 {user['classroom']}"
+            details_text = f"👤 {user['name']} ({user['role']}) - 🏫 {user['classroom']}" # Keep classroom as it's from DB, role might need translation if roles are translated in DB/logic
             # Small ID display: f"ID: {user_id[:8]}..."
-            id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray")
+            id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray") # "ID" is common
             id_label.pack(side="right", padx=(0,10), pady=2)
 
             label = ctk.CTkLabel(item_frame, text=details_text, font=BODY_FONT, anchor="w")
@@ -903,7 +948,7 @@ class App(ctk.CTk):
         if not self.selected_user_id_manage_tab:
             self.um_delete_button.configure(state="disabled")
             self.um_reset_password_button.configure(state="disabled")
-            self.um_update_user_button.configure(state="disabled", text="Update Selected User")
+            self.um_update_user_button.configure(state="disabled", text="Actualizar Usuario Seleccionado") # Translated
             self.um_add_user_button.configure(state="normal")
         else:
             # Re-highlight if selected user is still in the list
@@ -925,31 +970,28 @@ class App(ctk.CTk):
         role = self.um_role_combo.get()
 
         if not name or not password or not confirm_password or not classroom or not role:
-            messagebox.showerror("Input Error", "All fields (Name, Password, Confirm Password, Classroom, Role) are required.")
+            messagebox.showerror("Error de Entrada", "Todos los campos (Nombre, Contraseña, Confirmar Contraseña, Clase/Oficina, Rol) son requeridos.") # Translated
             return
         if password != confirm_password:
-            messagebox.showerror("Password Mismatch", "Passwords do not match. Please re-enter.")
+            messagebox.showerror("Contraseñas no Coinciden", "Las contraseñas no coinciden. Por favor, inténtalo de nuevo.") # Translated
             self.um_password_entry.delete(0, "end")
             self.um_confirm_password_entry.delete(0, "end")
             self.um_password_entry.focus()
             return
 
-        # student_manager.add_student_db expects (name, classroom, password, role)
         student_id = student_manager.add_student_db(name, classroom, password, role)
         if student_id:
-            messagebox.showinfo("Success", f"User '{name}' added successfully with ID: {student_id}")
-            self.clear_user_form_ui(clear_selection=False) # Keep form clear but don't reset selection logic if any
+            messagebox.showinfo("Éxito", f"Usuario '{name}' añadido con éxito. ID: {student_id}") # Translated
+            self.clear_user_form_ui(clear_selection=False)
             self.refresh_user_list_ui()
-            # Also refresh other student lists if they exist (e.g., in Manage Students or Loans tab)
             if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
             if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo()
         else:
-            messagebox.showerror("Database Error", f"Failed to add user '{name}'. Check console for details.")
+            messagebox.showerror("Error de Base de Datos", f"Error al añadir usuario '{name}'. Revisa la consola para más detalles.") # Translated
 
     def edit_user_ui(self):
-        """ Handles updating an existing user's details using student_manager.update_student_details_db. """
         if not self.selected_user_id_manage_tab:
-            messagebox.showwarning("No User Selected", "Please select a user from the list to update.")
+            messagebox.showwarning("Ningún Usuario Seleccionado", "Por favor, selecciona un usuario de la lista para actualizar.") # Translated
             return
 
         user_id = self.selected_user_id_manage_tab
@@ -957,76 +999,70 @@ class App(ctk.CTk):
         new_classroom = self.um_classroom_combo.get()
         new_role = self.um_role_combo.get()
 
-        if not new_name: # Basic validation
-            messagebox.showerror("Input Error", "Name field cannot be empty for an update.")
+        if not new_name:
+            messagebox.showerror("Error de Entrada", "El campo de nombre no puede estar vacío para una actualización.") # Translated
             self.um_name_entry.focus()
             return
-
-        # Classroom and Role are from ComboBox, so they'll always have a value.
 
         success = student_manager.update_student_details_db(user_id, new_name, new_classroom, new_role)
 
         if success:
-            messagebox.showinfo("Update Successful", f"User '{new_name}' (ID: {user_id[:8]}) details have been updated.")
-            self.clear_user_form_ui(clear_selection=True) # Resets form and selection state
-            self.refresh_user_list_ui() # Refresh the user list in the current tab
-
-            # Refresh other relevant UI parts if they exist
-            if hasattr(self, 'refresh_student_list_ui'): # For the "Manage Students" tab
+            messagebox.showinfo("Actualización Exitosa", f"Los detalles del usuario '{new_name}' (ID: {user_id[:8]}) han sido actualizados.") # Translated
+            self.clear_user_form_ui(clear_selection=True)
+            self.refresh_user_list_ui()
+            if hasattr(self, 'refresh_student_list_ui'):
                 self.refresh_student_list_ui()
-            if hasattr(self, 'refresh_leader_selector_combo'): # For the "Manage Loans" tab
+            if hasattr(self, 'refresh_leader_selector_combo'):
                 self.refresh_leader_selector_combo()
         else:
-            messagebox.showerror("Update Failed", f"Could not update details for user '{new_name}'. Please check the console for errors or ensure the user exists.")
+            messagebox.showerror("Actualización Fallida", f"No se pudieron actualizar los detalles para el usuario '{new_name}'. Por favor, revisa la consola.") # Translated
 
     def delete_user_ui(self):
         if not self.selected_user_id_manage_tab:
-            messagebox.showwarning("No User Selected", "Please select a user from the list to delete.")
+            messagebox.showwarning("Ningún Usuario Seleccionado", "Por favor, selecciona un usuario de la lista para eliminar.") # Translated
             return
 
         user_id = self.selected_user_id_manage_tab
-        # Fetch user details for confirmation message
         user_details = student_manager.get_student_by_id_db(user_id)
-        user_name = user_details['name'] if user_details else "the selected user"
+        user_name = user_details['name'] if user_details else "el usuario seleccionado" # Translated
 
-        if not messagebox.askyesno("Confirm Deletion", f"Are you sure you want to permanently delete user '{user_name}' (ID: {user_id[:8]})?\nThis action cannot be undone."):
+        if not messagebox.askyesno("Confirmar Eliminación", f"¿Estás seguro de que quieres eliminar permanentemente al usuario '{user_name}' (ID: {user_id[:8]})?\nEsta acción no se puede deshacer."): # Translated
             return
 
         success = student_manager.delete_student_db(user_id)
         if success:
-            messagebox.showinfo("Deletion Successful", f"User '{user_name}' has been deleted.")
+            messagebox.showinfo("Eliminación Exitosa", f"El usuario '{user_name}' ha sido eliminado.") # Translated
             self.clear_user_form_ui(clear_selection=True)
             self.refresh_user_list_ui()
-            # Also refresh other student lists if they exist
             if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
             if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo()
         else:
-            messagebox.showerror("Deletion Failed", f"Failed to delete user '{user_name}'. They might be involved in active loans or an error occurred.")
+            messagebox.showerror("Eliminación Fallida", f"Error al eliminar el usuario '{user_name}'. Podría estar involucrado en préstamos activos o ocurrió un error.") # Translated
 
     def reset_user_password_ui(self):
         if not self.selected_user_id_manage_tab:
-            messagebox.showwarning("No User Selected", "Please select a user to reset their password.")
+            messagebox.showwarning("Ningún Usuario Seleccionado", "Por favor, selecciona un usuario para restablecer su contraseña.") # Translated
             return
 
         user_id = self.selected_user_id_manage_tab
         user_details = student_manager.get_student_by_id_db(user_id)
-        user_name = user_details['name'] if user_details else "selected user"
+        user_name = user_details['name'] if user_details else "usuario seleccionado" # Translated
 
-        new_password = simpledialog.askstring("New Password", f"Enter new password for {user_name}:", show='*')
+        new_password = simpledialog.askstring("Nueva Contraseña", f"Introduce la nueva contraseña para {user_name}:", show='*') # Translated
         if not new_password:
-            messagebox.showinfo("Cancelled", "Password reset cancelled.")
+            messagebox.showinfo("Cancelado", "Restablecimiento de contraseña cancelado.") # Translated
             return
 
-        confirm_new_password = simpledialog.askstring("Confirm New Password", "Confirm the new password:", show='*')
+        confirm_new_password = simpledialog.askstring("Confirmar Nueva Contraseña", "Confirma la nueva contraseña:", show='*') # Translated
         if new_password != confirm_new_password:
-            messagebox.showerror("Password Mismatch", "New passwords do not match. Password not reset.")
+            messagebox.showerror("Contraseñas no Coinciden", "Las nuevas contraseñas no coinciden. La contraseña no ha sido restablecida.") # Translated
             return
 
         success = student_manager.update_student_password_db(user_id, new_password)
         if success:
-            messagebox.showinfo("Password Reset", f"Password for user '{user_name}' has been successfully reset.")
+            messagebox.showinfo("Contraseña Restablecida", f"La contraseña para el usuario '{user_name}' ha sido restablecida con éxito.") # Translated
         else:
-            messagebox.showerror("Password Reset Failed", f"Failed to reset password for '{user_name}'.")
+            messagebox.showerror("Error al Restablecer Contraseña", f"Error al restablecer la contraseña para '{user_name}'.") # Translated
 
     # def um_toggle_password_visibility(self): # Optional helper
     #     if self.um_show_password_var.get() == "on":
