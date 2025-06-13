@@ -137,6 +137,14 @@ class App(ctk.CTk):
         self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
         self.setup_leaderboard_tab() # Call the new method
 
+        if auth_manager.is_admin():
+            self.manage_classrooms_tab = self.tab_view.add("🏫 Gestionar Clases") # Translated
+            if hasattr(self, 'setup_manage_classrooms_tab'):
+                self.setup_manage_classrooms_tab()
+            else:
+                print("Error: El método setup_manage_classrooms_tab no se encontró pero se esperaba para el admin.")
+
+
         # Deiconify (show) the main window now that UI is initialized
         self.deiconify()
 
@@ -1237,9 +1245,9 @@ class App(ctk.CTk):
             messagebox.showerror("Error al Restablecer Contraseña", f"Error al restablecer la contraseña para '{user_name}'.") # Translated
 
     def import_students_csv_ui(self):
-        selected_classroom = self.import_csv_classroom_combo.get()
-        if not selected_classroom or selected_classroom == "Primero cree una clase": # Translated
-            messagebox.showerror("Error de Selección de Clase", "Por favor, seleccione o introduzca una clase válida para la importación de CSV.") # Translated
+        selected_classroom = self.import_csv_classroom_combo.get().strip() # Added .strip() here
+        if not selected_classroom or selected_classroom == "Primero cree una clase": # Check after stripping
+            messagebox.showerror("Error de Selección de Clase", "Por favor, seleccione o introduzca una clase válida para la importación de CSV. El nombre no puede estar vacío.") # Translated and clarified
             return
 
         file_path = filedialog.askopenfilename(
@@ -1261,31 +1269,191 @@ class App(ctk.CTk):
         else:
             messagebox.showinfo("Importación Exitosa", summary_message) # Translated
 
-        # Refresh relevant UI elements
-        self.refresh_user_list_ui() # This list shows all users including new students
-        if hasattr(self, 'refresh_student_list_ui'): # If the dedicated student list tab exists
-            self.refresh_student_list_ui()
+        self.refresh_all_classroom_displays() # Use the new central refresh method
 
-        # Refresh classroom comboboxes in case a new classroom was implicitly created by typing it in
-        # or if the list of distinct classrooms needs updating generally.
-        updated_classrooms = student_manager.get_distinct_classrooms()
-        if not updated_classrooms: updated_classrooms = ["(Vacío)"] # Translated
 
-        self.import_csv_classroom_combo.configure(values=updated_classrooms)
-        # Try to keep current selection if it's still valid, else set to first
-        if selected_classroom in updated_classrooms:
-            self.import_csv_classroom_combo.set(selected_classroom)
-        elif updated_classrooms[0] != "(Vacío)":
-            self.import_csv_classroom_combo.set(updated_classrooms[0])
+    def setup_manage_classrooms_tab(self):
+        self.selected_classroom_for_rename = None # Initialize instance variable
+        tab = self.manage_classrooms_tab
+        tab.configure(fg_color=("#F0F0F0", "#333333")) # Neutral colors
+
+        # Main content frame, splitting into two columns
+        main_content_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        main_content_frame.pack(expand=True, fill="both", padx=15, pady=15)
+        main_content_frame.grid_columnconfigure(0, weight=1) # List column
+        main_content_frame.grid_columnconfigure(1, weight=1) # Actions column
+        main_content_frame.grid_rowconfigure(0, weight=1)
+
+        # --- Left Column: List and Select Classroom ---
+        left_column_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+        left_column_frame.grid(row=0, column=0, padx=(0,10), pady=0, sticky="nsew")
+
+        ctk.CTkLabel(left_column_frame, text="Clases Existentes", font=HEADING_FONT).pack(pady=(10,5), padx=10)
+
+        self.classrooms_list_frame = ctk.CTkScrollableFrame(left_column_frame, corner_radius=6)
+        self.classrooms_list_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
+
+        # --- Right Column: Rename Classroom ---
+        right_column_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+        right_column_frame.grid(row=0, column=1, padx=(10,0), pady=0, sticky="nsew")
+
+        rename_frame = ctk.CTkFrame(right_column_frame, fg_color="transparent")
+        rename_frame.pack(pady=20, padx=20, fill="x")
+
+        ctk.CTkLabel(rename_frame, text="Renombrar Clase Seleccionada", font=HEADING_FONT).pack(pady=(0,15))
+
+        ctk.CTkLabel(rename_frame, text="Nuevo Nombre para la Clase:", font=BODY_FONT).pack(anchor="w") # Translated
+        self.rename_classroom_entry = ctk.CTkEntry(rename_frame, font=BODY_FONT, placeholder_text="Escribe el nuevo nombre aquí", state="disabled") # Translated
+        self.rename_classroom_entry.pack(fill="x", pady=(0,10))
+
+        self.rename_classroom_button = ctk.CTkButton(rename_frame, text="Guardar Nuevo Nombre", font=BUTTON_FONT, command=self.rename_classroom_ui, state="disabled", corner_radius=8) # Translated
+        self.rename_classroom_button.pack(fill="x", pady=10)
+
+        self.refresh_classroom_management_list()
+
+    def refresh_classroom_management_list(self):
+        if not hasattr(self, 'classrooms_list_frame'):
+            return
+        for widget in self.classrooms_list_frame.winfo_children():
+            widget.destroy()
+
+        classrooms = student_manager.get_distinct_classrooms()
+        if not classrooms:
+            ctk.CTkLabel(self.classrooms_list_frame, text="No hay clases definidas actualmente.").pack(pady=10) # Translated
+            # Disable rename functionality if no classes
+            if hasattr(self, 'rename_classroom_entry'): self.rename_classroom_entry.configure(state="disabled")
+            if hasattr(self, 'rename_classroom_button'): self.rename_classroom_button.configure(state="disabled")
+            self.selected_classroom_for_rename = None
+            return
+
+        for classroom_name in classrooms:
+            btn = ctk.CTkButton(
+                self.classrooms_list_frame,
+                text=classroom_name,
+                font=BODY_FONT,
+                command=lambda cn=classroom_name: self.on_classroom_select_for_rename(cn)
+            )
+            btn.pack(fill="x", pady=3, padx=5)
+
+    def on_classroom_select_for_rename(self, classroom_name):
+        self.selected_classroom_for_rename = classroom_name
+        self.rename_classroom_entry.configure(state="normal")
+        self.rename_classroom_entry.delete(0, "end")
+        self.rename_classroom_entry.insert(0, classroom_name)
+        self.rename_classroom_button.configure(state="normal")
+
+    def rename_classroom_ui(self):
+        if not self.selected_classroom_for_rename:
+            messagebox.showwarning("Advertencia", "Por favor, selecciona una clase de la lista para renombrar.") # Translated
+            return
+
+        old_name = self.selected_classroom_for_rename
+        new_name = self.rename_classroom_entry.get().strip()
+
+        if not new_name:
+            messagebox.showerror("Error de Entrada", "El nuevo nombre de la clase no puede estar vacío.") # Translated
+            return
+
+        if new_name == old_name:
+            messagebox.showinfo("Información", "El nuevo nombre es igual al anterior. No se realizaron cambios.") # Translated
+            return
+
+        # Optional: Check if new_name conflicts with another existing classroom (excluding old_name)
+        # existing_classrooms = student_manager.get_distinct_classrooms()
+        # if new_name in existing_classrooms and new_name != old_name:
+        #     if not messagebox.askyesno("Confirmar Sobrescritura Potencial",
+        #                                f"La clase '{new_name}' ya existe. Si continúas, los alumnos de '{old_name}' se moverán a '{new_name}'.\n¿Estás seguro?"):
+        #         return
+
+        success = student_manager.rename_classroom(old_name, new_name)
+
+        if success:
+            messagebox.showinfo("Éxito", f"La clase '{old_name}' ha sido renombrada a '{new_name}'.") # Translated
+            self.refresh_all_classroom_displays()
+            # Reset selection and UI state
+            self.selected_classroom_for_rename = None
+            self.rename_classroom_entry.delete(0, "end")
+            self.rename_classroom_entry.configure(state="disabled")
+            self.rename_classroom_button.configure(state="disabled")
         else:
-             self.import_csv_classroom_combo.set(updated_classrooms[0])
+            messagebox.showerror("Error al Renombrar", f"No se pudo renombrar la clase '{old_name}'. Verifica si la clase tenía alumnos o revisa la consola.") # Translated
 
+    def refresh_all_classroom_displays(self):
+        # 1. Refresh the list in the current "Gestionar Clases" tab
+        if hasattr(self, 'refresh_classroom_management_list'):
+            self.refresh_classroom_management_list()
 
-        # Also update classroom combos in other relevant places if they exist
+        # 2. Get updated list of distinct classrooms
+        updated_classrooms = student_manager.get_distinct_classrooms()
+        # Ensure "OficinaAdmin" is available if it's special, or handle classroom lists consistently
+        # For now, let's assume "OficinaAdmin" might not be in distinct_classrooms if no student is there.
+        # It's better if UI elements requiring "OficinaAdmin" explicitly add it if not present.
+
+        # Create a base list for general classroom selection
+        general_classroom_list = updated_classrooms if updated_classrooms else ["(Ninguna clase)"] # Translated
+
+        # 3. Refresh classroom combobox in "Gestionar Usuarios" (CSV import)
+        if hasattr(self, 'import_csv_classroom_combo'):
+            current_csv_class = self.import_csv_classroom_combo.get()
+            self.import_csv_classroom_combo.configure(values=general_classroom_list)
+            if current_csv_class in general_classroom_list:
+                self.import_csv_classroom_combo.set(current_csv_class)
+            elif general_classroom_list:
+                self.import_csv_classroom_combo.set(general_classroom_list[0])
+
+        # 4. Refresh classroom combobox in "Gestionar Usuarios" (user editing)
+        # This one might need special handling for "OficinaAdmin" if it's not a student classroom
+        um_classroom_list_with_admin = sorted(list(set(updated_classrooms + ["OficinaAdmin"]))) # Ensure AdminOffice is an option
         if hasattr(self, 'um_classroom_combo'):
-             self.um_classroom_combo.configure(values=updated_classrooms + ["OficinaAdmin"]) # Assuming AdminOffice is special
-        if hasattr(self, 'student_classroom_combo'): # In manage_students_tab (original)
-             self.student_classroom_combo.configure(values=updated_classrooms)
+            current_um_class = self.um_classroom_combo.get()
+            self.um_classroom_combo.configure(values=um_classroom_list_with_admin)
+            if current_um_class in um_classroom_list_with_admin:
+                self.um_classroom_combo.set(current_um_class)
+            elif um_classroom_list_with_admin:
+                self.um_classroom_combo.set(um_classroom_list_with_admin[0])
+
+        # 5. Refresh classroom combobox in "Gestionar Alumnos" (original student tab)
+        if hasattr(self, 'student_classroom_combo'):
+            current_student_tab_class = self.student_classroom_combo.get()
+            self.student_classroom_combo.configure(values=general_classroom_list)
+            if current_student_tab_class in general_classroom_list:
+                self.student_classroom_combo.set(current_student_tab_class)
+            elif general_classroom_list:
+                self.student_classroom_combo.set(general_classroom_list[0])
+
+        # 6. Refresh classroom filter in "Ver Libros" (if classrooms are used as ubicaciones)
+        # Assuming 'ubicacion' can be any classroom name or 'Biblioteca'
+        view_books_ubicaciones = sorted(list(set(updated_classrooms + ["Biblioteca", "Todos"]))) # "Todos" is a filter option
+        if hasattr(self, 'view_ubicacion_filter'):
+            current_view_ubicacion = self.view_ubicacion_filter.get()
+            self.view_ubicacion_filter.configure(values=view_books_ubicaciones)
+            if current_view_ubicacion in view_books_ubicaciones:
+                self.view_ubicacion_filter.set(current_view_ubicacion)
+            elif "Todos" in view_books_ubicaciones: # Default to "Todos"
+                 self.view_ubicacion_filter.set("Todos")
+            elif view_books_ubicaciones:
+                self.view_ubicacion_filter.set(view_books_ubicaciones[0])
+
+
+        # 7. Refresh classroom filter in Leaderboards
+        if hasattr(self, 'leaderboard_class_filter_combo'):
+            # This combo is enabled/disabled based on "Global" vs "Por Clase"
+            # We only need to update its values if it's supposed to be showing classes
+            if self.leaderboard_filter_type_combo.get() == "🏫 Por Clase":
+                current_leaderboard_class = self.leaderboard_class_filter_combo.get()
+                lb_class_list = general_classroom_list if general_classroom_list[0] != "(Ninguna clase)" else ["No hay clases"]
+                self.leaderboard_class_filter_combo.configure(values=lb_class_list)
+                if current_leaderboard_class in lb_class_list:
+                    self.leaderboard_class_filter_combo.set(current_leaderboard_class)
+                elif lb_class_list:
+                    self.leaderboard_class_filter_combo.set(lb_class_list[0])
+            # No need to else, values are cleared if "Global" is selected by on_leaderboard_filter_type_change
+
+        # 8. Refresh leader selector combo in Manage Loans (as it displays classroom names)
+        if hasattr(self, 'refresh_leader_selector_combo'):
+            self.refresh_leader_selector_combo()
+
+        print("All relevant classroom displays and lists have been refreshed.")
 
 
     def setup_leaderboard_tab(self):

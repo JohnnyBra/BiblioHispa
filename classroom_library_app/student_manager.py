@@ -266,6 +266,44 @@ def get_distinct_classrooms():
             conn.close()
     return classrooms
 
+def rename_classroom(old_classroom_name, new_classroom_name):
+    """
+    Renames a classroom for all students in it.
+
+    Args:
+        old_classroom_name (str): The current name of the classroom.
+        new_classroom_name (str): The new name for the classroom.
+
+    Returns:
+        bool: True if at least one student's classroom was updated, False otherwise.
+    """
+    if not new_classroom_name or not new_classroom_name.strip():
+        print("Error: New classroom name cannot be empty or just whitespace.")
+        return False
+    if old_classroom_name == new_classroom_name:
+        print("Info: Old and new classroom names are the same. No change made.")
+        return False # Or True, depending on desired behavior for no-op
+
+    conn = None
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        cursor = conn.cursor()
+        cursor.execute("UPDATE students SET classroom = ? WHERE classroom = ?",
+                       (new_classroom_name.strip(), old_classroom_name))
+        conn.commit()
+        if cursor.rowcount > 0:
+            print(f"Successfully renamed classroom '{old_classroom_name}' to '{new_classroom_name}' for {cursor.rowcount} students.")
+            return True
+        else:
+            print(f"No students found in classroom '{old_classroom_name}'. No changes made.")
+            return False
+    except sqlite3.Error as e:
+        print(f"Database error in rename_classroom: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 # --- CSV Import Functionality ---
 import csv
 import io # For testing with StringIO
@@ -644,6 +682,59 @@ if __name__ == '__main__':
     success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 6")
     print(f"  Successfully imported: {success_count}") # Expected: 0
     print(f"  Errors: {errors}") # Expected: [] (header skip handles this gracefully)
+
+
+    # --- Test Classroom Renaming ---
+    print("\n--- Testing Classroom Renaming ---")
+    # Add some students to a test classroom
+    rename_test_class_old = "RenameTestClassOld"
+    rename_test_class_new = "RenameTestClassNew"
+    add_student_db("Rename Student 1", rename_test_class_old, None)
+    add_student_db("Rename Student 2", rename_test_class_old, None)
+    add_student_db("Rename Student Other", "OtherClassUnchanged", None)
+
+    print(f"Initial students in '{rename_test_class_old}':")
+    for s in get_students_db(classroom_filter=rename_test_class_old):
+        print(f"  - {s['name']}")
+
+    # Test successful rename
+    print(f"\nAttempting to rename '{rename_test_class_old}' to '{rename_test_class_new}'...")
+    rename_success = rename_classroom(rename_test_class_old, rename_test_class_new)
+    print(f"Rename operation success: {rename_success}") # Expected: True
+
+    print(f"Students in '{rename_test_class_new}' after rename:")
+    students_in_new = get_students_db(classroom_filter=rename_test_class_new)
+    for s in students_in_new:
+        print(f"  - {s['name']}")
+    if len(students_in_new) == 2:
+        print("  SUCCESS: Correct number of students in new class name.")
+    else:
+        print(f"  FAILURE: Incorrect number of students. Expected 2, got {len(students_in_new)}")
+
+    print(f"Students in '{rename_test_class_old}' after rename (should be 0):")
+    students_in_old_after_rename = get_students_db(classroom_filter=rename_test_class_old)
+    if not students_in_old_after_rename:
+        print("  SUCCESS: No students found in old class name.")
+    else:
+        print(f"  FAILURE: Found {len(students_in_old_after_rename)} students still in old class name.")
+
+
+    # Test renaming non-existent class
+    print("\nAttempting to rename a non-existent class ('NonExistentClassOld' to 'NonExistentClassNew')...")
+    rename_non_existent_success = rename_classroom("NonExistentClassOld", "NonExistentClassNew")
+    print(f"Rename non-existent class success: {rename_non_existent_success}") # Expected: False
+
+    # Test renaming to empty/whitespace name
+    print(f"\nAttempting to rename '{rename_test_class_new}' to an empty string...")
+    rename_to_empty_success = rename_classroom(rename_test_class_new, "   ")
+    print(f"Rename to empty string success: {rename_to_empty_success}") # Expected: False
+    # Verify students are still in rename_test_class_new
+    students_after_empty_attempt = get_students_db(classroom_filter=rename_test_class_new)
+    if len(students_after_empty_attempt) == 2:
+        print(f"  SUCCESS: Students correctly remained in '{rename_test_class_new}'.")
+    else:
+        print(f"  FAILURE: Student count in '{rename_test_class_new}' changed after attempting rename to empty.")
+
 
     # Clean up the temporary file
     try:
