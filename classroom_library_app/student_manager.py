@@ -302,35 +302,36 @@ def import_students_from_csv(file_path, classroom_name):
                     last_name_str = None
                     first_name_str = None
 
+                    if not row: # Handle completely empty rows
+                        errors.append(f"Row {row_num}: Empty row.")
+                        continue
+
                     if len(row) == 1:
-                        single_field = row[0].strip()
-                        if single_field.startswith('"') and single_field.endswith('"'):
-                            unquoted_field = single_field[1:-1]
-                            parts = unquoted_field.split(',', 1) # Split only on the first comma
-                            if len(parts) == 2:
-                                last_name_str = parts[0].strip()
-                                first_name_str = parts[1].strip()
-                            else:
-                                errors.append(f"Row {row_num}: Malformed data (single quoted field not 'lastname,firstname'): '{','.join(row)}'")
-                                continue
-                        else: # Single field but not quoted as expected, or other content
-                            errors.append(f"Row {row_num}: Malformed data (expected 2 columns or a single 'lastname,firstname' quoted field): '{','.join(row)}'")
+                        # csv.reader handles unquoting. If a field was quoted and contained a comma,
+                        # it will still be a single element in `row` after initial parsing.
+                        content = row[0].strip()
+                        parts = content.split(',', 1)  # Split only on the first comma
+                        if len(parts) == 2:
+                            last_name_str = parts[0].strip()
+                            first_name_str = parts[1].strip()
+                        else:
+                            # Single field that doesn't contain "lastname,firstname"
+                            errors.append(f"Row {row_num}: Malformed data (single field does not contain 'lastname,firstname'): '{row[0]}'")
                             continue
                     elif len(row) == 2:
                         last_name_str = row[0].strip()
                         first_name_str = row[1].strip()
-                    else:
-                        errors.append(f"Row {row_num}: Malformed data (expected 1 or 2 columns, got {len(row)}): '{','.join(row)}'")
+                    else: # len(row) is 0 (already handled by 'if not row') or > 2
+                        errors.append(f"Row {row_num}: Malformed data (expected 1 or 2 fields per row after CSV parsing, got {len(row)}): '{','.join(row)}'")
                         continue
 
-                    # Check if names are empty after stripping (applies to both parsing paths)
-                    if not last_name_str or not first_name_str: # Ensure both names are present
-                        errors.append(f"Row {row_num}: Missing first or last name after processing. Original content: '{','.join(row)}'")
+                    # Check if names are empty after stripping
+                    if not last_name_str or not first_name_str:
+                        errors.append(f"Row {row_num}: Missing first or last name after parsing. Original content: '{','.join(row)}'")
                         continue
 
                     full_name = f"{first_name_str} {last_name_str}".strip()
-                    # This check for empty full_name might be redundant if the above check (not last_name_str or not first_name_str) is robust
-                    if not full_name:
+                    if not full_name: # Should be caught by the above, but as a safeguard
                         errors.append(f"Row {row_num}: Resulting full name is empty. Original content: '{','.join(row)}'")
                         continue
 
@@ -552,54 +553,74 @@ if __name__ == '__main__':
     print(f"  Successfully imported: {success_count}") # Expected: 0
     print(f"  Errors: {errors}") # Expected: ["Error: The file '...' was not found."]
 
-    # Test case 3b: New format CSV import
-    print("\nTest Case 3b: New Format CSV (single quoted column and mixed)")
+    # Test case 3b: New format CSV import - Relying on csv.reader's default unquoting
+    print("\nTest Case 3b: New Format CSV (single and mixed fields, csv.reader handles quotes)")
+    # When writing to a file that csv.reader will process:
+    # - If you want a field to contain a comma, you must quote it: "Doe,John"
+    # - If a field is already quoted in your source string, and you write it directly,
+    #   it might result in double quoting if not handled carefully by the writer.
+    #   However, here we are just creating the string content.
+    #   The csv.reader will interpret "Doe,John" as a single field 'Doe,John'.
+    #   It will interpret Doe,John (no quotes) as two fields 'Doe' and 'John'.
     csv_content_new_format = (
-        '"Doe,John"\n'
-        '"Smith, Jane"\n'  # With space after comma
-        '"O\'Malley,Sean"\n' # Apostrophe in last name
-        'Regular,Entry\n'    # Standard two-column entry
-        '"JustOneValue"\n'   # Malformed single field - no comma
-        '"Bond, James, Extra"\n' # Malformed single field - too many commas after unquoting
-        '"", ""\n' # Both empty in two columns
-        '"",NoFirstName\n'
-        'NoLastName,""\n'
-        '" , "\n' # Quoted but empty after split and strip
-        '"OnlyLast,"' # Quoted, first name empty
-        '",OnlyFirst"' # Quoted, last name empty
+        'CombinedNameOrLastName,FirstNameIfSeparate\n'  # Header
+        '"Doe,John"\n'                 # Parsed by csv.reader as ['Doe,John']
+        '"Smith, Jane"\n'              # Parsed as ['Smith, Jane']
+        '"O\'Malley,Sean"\n'           # Parsed as ["O'Malley,Sean"]
+        'Regular,Entry\n'              # Parsed as ['Regular', 'Entry']
+        'JustOneValueNoComma\n'        # Parsed as ['JustOneValueNoComma'] -> error in our logic
+        '"JustOneValueInQuotes"\n'     # Parsed as ['JustOneValueInQuotes'] -> error in our logic
+        '"Bond, James, ExtraPart"\n'   # Parsed as ['Bond, James, ExtraPart'] -> split logic takes 'Bond' and ' James, ExtraPart'
+        ',""\n'                        # Parsed as ['', ''] -> error: last name empty
+        'NoLastName,\n'                # Parsed as ['NoLastName', ''] -> error: first name empty
+        '"",""\n'                      # Parsed as ['', ''] -> error: last name empty
+        '" "," "\n'                    # Parsed as [' ', ' '] -> error: last name empty (after strip)
+        '"OnlyLast," \n'               # Parsed as ['OnlyLast,'] -> split -> 'OnlyLast' and '' -> error: first name empty
+        '",OnlyFirst"\n'               # Parsed as [',OnlyFirst'] -> split -> '' and 'OnlyFirst' -> error: last name empty
+        'CompletelyEmptyRow\n'         # This line will be skipped by `if not row:` if csv.reader yields an empty list for it.
+                                       # If it yields ['CompletelyEmptyRow'], it will be an error.
+                                       # If it's truly an empty line in the file, csv.reader skips it by default.
+        '  LeadingSpace,TrailingSpace  \n' # Parsed as ['  LeadingSpace', 'TrailingSpace  '] -> names will be stripped
     )
     with open(temp_csv_file_path, 'w', newline='') as f:
-        f.write("CombinedNameOrLastName,FirstNameIfSeparate\n") # Header
         f.write(csv_content_new_format)
 
     success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 3b")
-    print(f"  Successfully imported: {success_count}") # Expected: John Doe, Jane Smith, Sean O'Malley, Entry Regular = 4
+    print(f"  Successfully imported: {success_count}")
+    # Expected: John Doe, Jane Smith, Sean O'Malley, Entry Regular, James Bond (from "Bond, James, ExtraPart"), TrailingSpace LeadingSpace = 6
     print(f"  Errors: {len(errors)} errors")
     for err in errors:
         print(f"    - {err}")
-    # Expected errors for: "JustOneValue", "Bond, James, Extra", "",NoFirstName, NoLastName,"", " , ", "OnlyLast,", ",OnlyFirst"
-    # Also error for the `"", ""` row.
+    # Expected errors for:
+    # JustOneValueNoComma (single field no comma)
+    # "JustOneValueInQuotes" (single field no comma)
+    # ,"" (empty last name)
+    # NoLastName, (empty first name)
+    # "","" (empty last name)
+    # " "," " (empty last name)
+    # "OnlyLast," (empty first name)
+    # ",OnlyFirst" (empty last name)
 
     # Verify successful imports for 3b
     if success_count > 0:
         csv_students_3b = get_students_db(classroom_filter="Test Class CSV 3b")
         print(f"  Students found in 'Test Class CSV 3b': {len(csv_students_3b)}")
-        expected_names_3b = ["John Doe", "Jane Smith", "Sean O'Malley", "Entry Regular"]
-        imported_names_3b = [s['name'] for s in csv_students_3b]
-        for name in expected_names_3b:
+        expected_names_3b = ["John Doe", "Jane Smith", "Sean O'Malley", "Entry Regular", "James Bond", "TrailingSpace LeadingSpace"]
+        imported_names_3b = sorted([s['name'] for s in csv_students_3b])
+        print(f"  Imported names: {imported_names_3b}")
+        for name in sorted(expected_names_3b):
             if name in imported_names_3b:
                 print(f"    SUCCESS: Found '{name}'")
             else:
                 print(f"    FAILURE: Did not find '{name}'")
+        # Check count carefully
+        if len(imported_names_3b) == len(expected_names_3b):
+             print(f"    SUCCESS: Correct number of students imported ({len(expected_names_3b)}).")
+        else:
+             print(f"    FAILURE: Incorrect number of students imported. Expected {len(expected_names_3b)}, got {len(imported_names_3b)}.")
 
 
-    # Test case 4: Empty classroom name
-    print("\nTest Case 3: File Not Found")
-    success_count, errors = import_students_from_csv(non_existent_file_path, "Test Class CSV 3")
-    print(f"  Successfully imported: {success_count}") # Expected: 0
-    print(f"  Errors: {errors}") # Expected: ["Error: The file '...' was not found."]
-
-    # Test case 4: Empty classroom name
+    # Test case 4: Empty classroom name (already exists, good)
     print("\nTest Case 4: Empty Classroom Name")
     with open(temp_csv_file_path, 'w', newline='') as f: # re-use valid content
         f.write("Doe,John\n")
