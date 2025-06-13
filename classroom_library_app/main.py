@@ -535,8 +535,9 @@ class App(ctk.CTk):
         lend_frame.columnconfigure(1, weight=1)
 
         lend_icon = self.load_icon("lend_book")
-        lend_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
-        lend_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Adjusted row from 4 to 3
+        # Storing the button in an instance variable self.lend_book_button
+        self.lend_book_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
+        self.lend_book_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Adjusted row from 4 to 3
 
         # --- Return Book Section ---
         return_frame = ctk.CTkFrame(left_frame, corner_radius=8)
@@ -625,13 +626,22 @@ class App(ctk.CTk):
 
     def update_loan_section_for_no_leader(self):
         self.current_loans_label.configure(text="Préstamos Actuales (Seleccione un Líder)") # Translated
-        self.reminders_label.configure(text="Recordatorios (Seleccione un Líder)") # Translated
-        self.lend_book_combo.configure(values=["Seleccione líder"], state="disabled") # Translated
-        self.borrower_combo.configure(values=["Seleccione líder"], state="disabled") # Translated
-        self.return_book_combo.configure(values=["Seleccione líder"], state="disabled") # Translated
-        self.lend_book_combo.set("Seleccione líder") # Translated
-        self.borrower_combo.set("Seleccione líder") # Translated
-        self.return_book_combo.set("Seleccione líder") # Translated
+        self.reminders_label.configure(text="Recordatorios (Seleccione un líder)") # Translated
+        self.lend_book_combo.configure(values=["Seleccione un líder"], state="disabled") # Translated
+        self.borrower_combo.configure(values=["Seleccione un líder"], state="disabled") # Translated
+        self.return_book_combo.configure(values=["Seleccione un líder"], state="disabled") # Translated
+        self.lend_book_combo.set("Seleccione un líder") # Translated
+        self.borrower_combo.set("Seleccione un líder") # Translated
+        self.return_book_combo.set("Seleccione un líder") # Translated
+
+        # Disable buttons
+        if hasattr(self, 'lend_book_button'): self.lend_book_button.configure(state="disabled")
+        # Ensure return_book_button exists before configuring
+        # It is defined as a local variable in setup_manage_loans_tab, needs to be self.return_book_button
+        # For now, let's assume it will be made self.return_book_button
+        if hasattr(self, 'return_book_button'): self.return_book_button.configure(state="disabled")
+        if hasattr(self, 'extend_loan_button'): self.extend_loan_button.configure(state="disabled")
+
 
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
         ctk.CTkLabel(self.current_loans_frame, text="Por favor, seleccione un líder estudiantil para gestionar préstamos.").pack(pady=20, padx=10) # Translated
@@ -643,105 +653,115 @@ class App(ctk.CTk):
             self.update_loan_section_for_no_leader()
             return
 
-        # Populate Lend Book ComboBox
-        # Books from the selected leader's ubicacion
-        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=None)
+        can_lend = True # Flag to manage lend button state
 
+        # Populate Lend Book ComboBox
+        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=None) # Filter by leader's classroom later if needed
         lend_book_display_names = []
         self.lend_book_map = {}
         for book in all_books_in_ubicacion:
             available_count = book_manager.get_available_book_count(book['id'])
             if available_count > 0:
-                display_text = f"{book.get('titulo', 'N/A')} (by {book.get('autor', 'N/A')}) - Disp: {available_count}"
+                display_text = f"{book.get('titulo', 'N/A')} (por {book.get('autor', 'N/A')}) - Disp: {available_count}" # Spanish 'by'
                 self.lend_book_map[display_text] = book['id']
                 lend_book_display_names.append(display_text)
 
-        self.lend_book_combo.configure(values=lend_book_display_names if lend_book_display_names else ["No available books"])
-        self.lend_book_combo.set(lend_book_display_names[0] if lend_book_display_names else "No available books")
+        if not lend_book_display_names:
+            self.lend_book_combo.configure(values=["No hay libros disponibles"], state="disabled") # Translated
+            self.lend_book_combo.set("No hay libros disponibles") # Translated
+            can_lend = False
+        else:
+            self.lend_book_combo.configure(values=lend_book_display_names, state="normal")
+            self.lend_book_combo.set(lend_book_display_names[0])
 
         # Populate Borrower ComboBox
-        students_in_classroom = student_manager.get_students_by_classroom_db(self.current_leader_classroom) # Assuming classroom is equivalent to ubicacion for students
-        self.borrower_student_map = {s['name']: s['id'] for s in students_in_classroom}
+        # Students from the selected leader's classroom
+        students_in_classroom = student_manager.get_students_by_classroom_db(self.current_leader_classroom)
+        self.borrower_student_map = {s['name']: s['id'] for s in students_in_classroom if s['id'] != self.current_leader_id} # Leader cannot borrow from themselves
         borrower_names = list(self.borrower_student_map.keys())
-        self.borrower_combo.configure(values=borrower_names if borrower_names else ["No students in class"])
-        self.borrower_combo.set(borrower_names[0] if borrower_names else "No students in class")
+
+        if not borrower_names:
+            self.borrower_combo.configure(values=["No hay alumnos en esta clase"], state="disabled") # Translated
+            self.borrower_combo.set("No hay alumnos en esta clase") # Translated
+            can_lend = False
+        else:
+            self.borrower_combo.configure(values=borrower_names, state="normal")
+            self.borrower_combo.set(borrower_names[0])
+
+        # Manage Lend Book Button state
+        if hasattr(self, 'lend_book_button'): # Ensure button exists
+            if can_lend:
+                self.lend_book_button.configure(state="normal")
+            else:
+                self.lend_book_button.configure(state="disabled")
 
         # Populate Return Book ComboBox
-        # Using current_leader_classroom as the ubicacion_filter for get_current_loans_db
-        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=None)
+        # Using current_leader_classroom to filter loans relevant to the leader's operational scope
+        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
         self.return_book_map = {}
         return_book_display_names = []
         for loan in active_loans_in_ubicacion:
-            # loan dict now contains 'titulo', 'borrower_name', 'due_date', 'loan_id'
             due_date_str = loan.get('due_date', 'N/A')
             due_date_display = 'N/A'
             if due_date_str != 'N/A':
                 try:
                     due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
-                    due_date_display = due_date_dt.strftime('%d-%m-%Y')
+                    due_date_display = due_date_dt.strftime('%d-%m-%Y') # Format for display
                 except ValueError:
-                    due_date_display = due_date_str # Fallback if parsing fails
+                    due_date_display = due_date_str
 
-            display_text = f"{loan.get('titulo', 'N/A')} (Prestatario: {loan.get('borrower_name', 'N/A')}) Vence: {due_date_display}"
-            self.return_book_map[display_text] = loan['loan_id'] # Map display text to loan_id
+            display_text = f"{loan.get('titulo', 'N/A')} (Prestatario: {loan.get('borrower_name', 'N/A')}) Vence: {due_date_display}" # Translated "Borrower" and "Due"
+            self.return_book_map[display_text] = loan['loan_id']
             return_book_display_names.append(display_text)
 
-        self.return_book_combo.configure(values=return_book_display_names if return_book_display_names else ["No borrowed books"])
-        self.return_book_combo.set(return_book_display_names[0] if return_book_display_names else "No borrowed books")
-        self.on_return_book_selection_change(self.return_book_combo.get()) # Set initial state for extend_loan_button
+        if not return_book_display_names:
+            self.return_book_combo.configure(values=["No hay libros prestados"], state="disabled") # Translated
+            self.return_book_combo.set("No hay libros prestados") # Translated
+        else:
+            self.return_book_combo.configure(values=return_book_display_names, state="normal")
+            self.return_book_combo.set(return_book_display_names[0])
+
+        self.on_return_book_selection_change(self.return_book_combo.get())
 
         self.refresh_current_loans_list()
         self.refresh_reminders_list()
 
     def lend_book_ui(self):
         if not self.current_leader_id:
-            messagebox.showerror("Leader Not Selected", "Please select a student leader first.")
+            messagebox.showerror("Líder No Seleccionado", "Por favor, seleccione primero un líder estudiantil.") # Translated
             return
 
         book_display_name = self.lend_book_combo.get()
         borrower_display_name = self.borrower_combo.get()
-        # due_date_str = self.due_date_entry.get() # Removed
 
-        if book_display_name == "No available books" or borrower_display_name == "No students in class":
-            messagebox.showerror("Input Error", "Please select a valid book and borrower.")
+        if book_display_name == "No hay libros disponibles" or borrower_display_name == "No hay alumnos en esta clase": # Translated
+            messagebox.showerror("Error de Entrada", "Por favor, seleccione un libro y prestatario válidos.") # Translated
             return
-
-        # if not due_date_str: # Removed
-        #     messagebox.showerror("Input Error", "Due date is required.")
-        #     return
-        # try: # Removed
-        #     # Validate due_date_str format, but allow it to be in the past for flexibility if needed,
-        #     # though typically it should be in the future.
-        #     datetime.strptime(due_date_str, '%Y-%m-%d')
-        # except ValueError: # Removed
-        #     messagebox.showerror("Input Error", "Invalid date format for Due Date. Use YYYY-MM-DD.")
-        #     return
 
         book_id = self.lend_book_map.get(book_display_name)
         borrower_id = self.borrower_student_map.get(borrower_display_name)
 
         if not book_id or not borrower_id:
-            messagebox.showerror("Internal Error", "Could not resolve book or borrower ID from selection.")
+            messagebox.showerror("Error Interno", "No se pudo resolver el ID del libro o prestatario desde la selección.") # Translated
             return
 
-        # Calculate due date: 2 weeks from now
         due_date_calculated = datetime.now() + timedelta(days=14)
         due_date_str_for_db = due_date_calculated.strftime('%Y-%m-%d')
 
-        # Call the updated book_manager.loan_book_db
         success = book_manager.loan_book_db(book_id, borrower_id, due_date_str_for_db, self.current_leader_id)
 
         if success:
-            messagebox.showinfo("Success", f"Book '{book_display_name.split(' (by ')[0]}' loaned to {borrower_display_name}.")
-            # self.due_date_entry.delete(0, 'end') # Clear entry for next use - Removed
+            # Assuming display_text format: "Book Title (por Author) - Disp: Count"
+            actual_book_title = book_display_name.split(' (por ')[0]
+            messagebox.showinfo("Éxito", f"Libro '{actual_book_title}' prestado a {borrower_display_name}.") # Translated
             self.refresh_loan_related_combos_and_lists()
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
         else:
-            messagebox.showerror("Loan Failed", "Failed to loan book. Check console (book might not be available or other DB error).")
+            messagebox.showerror("Préstamo Fallido", "Error al prestar el libro. Revise la consola (el libro podría no estar disponible o ocurrió otro error de BD).") # Translated
 
     def return_book_ui(self):
         if not self.current_leader_id:
-            messagebox.showerror("Leader Not Selected", "Please select a student leader first.")
+            messagebox.showerror("Líder No Seleccionado", "Por favor, seleccione primero un líder estudiantil.") # Translated
             return
 
         return_loan_display_name = self.return_book_combo.get()
