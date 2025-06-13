@@ -348,6 +348,54 @@ def get_books_due_soon_db(days_threshold=7, ubicacion_filter=None):
         if conn:
             conn.close()
 
+def extend_loan_db(loan_id, days_to_extend=14):
+    conn = None  # Initialize conn to None for the finally block
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        cursor = conn.cursor()
+
+        # Fetch the current due_date
+        cursor.execute("SELECT due_date FROM loans WHERE loan_id = ?", (loan_id,))
+        result = cursor.fetchone()
+
+        if result is None:
+            print(f"Error: Loan ID {loan_id} not found.")
+            return False
+
+        current_due_date_str = result[0]
+        # Ensure current_due_date_str is not None and is a valid date string
+        if not current_due_date_str:
+            print(f"Error: Due date is missing for loan ID {loan_id}.")
+            return False
+
+        current_due_date_dt = datetime.strptime(current_due_date_str, '%Y-%m-%d').date()
+
+        new_due_date_dt = current_due_date_dt + timedelta(days=days_to_extend)
+        new_due_date_str = new_due_date_dt.strftime('%Y-%m-%d')
+
+        # Update the due_date
+        cursor.execute("UPDATE loans SET due_date = ? WHERE loan_id = ?", (new_due_date_str, loan_id))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            # This case should ideally not be hit if the SELECT found the loan,
+            # but as a safeguard for the UPDATE not affecting rows.
+            print(f"Error: Failed to update loan ID {loan_id}. Loan might have been deleted concurrently.")
+            return False
+
+        return True
+
+    except sqlite3.Error as e:
+        print(f"Database error in extend_loan_db: {e}")
+        # Consider specific error handling or logging here
+        return False
+    except ValueError as ve: # Handles potential strptime errors if date format is unexpected
+        print(f"Date format error for loan ID {loan_id}: {ve}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 if __name__ == '__main__':
     # Example Usage (for testing purposes)
     # First, ensure database and table are created by running db_setup.py or main.py

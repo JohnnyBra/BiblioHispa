@@ -533,13 +533,17 @@ class App(ctk.CTk):
         ctk.CTkLabel(return_frame, text="⬅️ Devolver un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # Translated
 
         ctk.CTkLabel(return_frame, text="Libro Prestado:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated "Book:" to "Libro Prestado:" for clarity
-        self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
+        self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_return_book_selection_change)
         self.return_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
         return_frame.columnconfigure(1, weight=1)
 
         return_icon = self.load_icon("return_book")
         return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Translated
         return_button.grid(row=2, column=0, columnspan=2, pady=15, sticky="ew")
+
+        extend_loan_icon = self.load_icon("extend_loan")
+        self.extend_loan_button = ctk.CTkButton(return_frame, text="Extender Préstamo", image=extend_loan_icon, font=BUTTON_FONT, state="disabled", corner_radius=8, command=self.extend_loan_ui)
+        self.extend_loan_button.grid(row=3, column=0, columnspan=2, pady=(5,15), sticky="ew")
 
         right_frame = ctk.CTkFrame(main_loan_content_frame, fg_color="transparent")
         right_frame.pack(side="left", expand=True, fill="both", padx=(10,0), pady=0)
@@ -669,6 +673,7 @@ class App(ctk.CTk):
 
         self.return_book_combo.configure(values=return_book_display_names if return_book_display_names else ["No borrowed books"])
         self.return_book_combo.set(return_book_display_names[0] if return_book_display_names else "No borrowed books")
+        self.on_return_book_selection_change(self.return_book_combo.get()) # Set initial state for extend_loan_button
 
         self.refresh_current_loans_list()
         self.refresh_reminders_list()
@@ -743,6 +748,33 @@ class App(ctk.CTk):
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
         else:
             messagebox.showerror("Return Failed", "Failed to return book. Check console (loan ID might be invalid or other DB error).")
+
+    def on_return_book_selection_change(self, selection=None): # 'selection' arg is passed by CTkComboBox command
+        # selection is the display text from the combobox
+        loan_id = self.return_book_map.get(selection)
+        if loan_id:
+            self.extend_loan_button.configure(state="normal")
+        else:
+            self.extend_loan_button.configure(state="disabled")
+
+    def extend_loan_ui(self):
+        selected_loan_display_text = self.return_book_combo.get()
+        loan_id = self.return_book_map.get(selected_loan_display_text)
+
+        if not loan_id: # This also handles cases where selected_loan_display_text might be a placeholder like "No hay libros prestados" if that key isn't in the map
+            messagebox.showerror("Error", "Por favor, seleccione un préstamo válido para extender.")
+            return
+
+        # Assuming book_manager.extend_loan_db(loan_id) will be created and will return True on success, False on failure.
+        # We'll default days_to_extend to 14 in the db function.
+        success = book_manager.extend_loan_db(loan_id)
+
+        if success:
+            messagebox.showinfo("Éxito", "Préstamo extendido con éxito por 14 días.")
+            self.refresh_loan_related_combos_and_lists()
+            # Consider if self.refresh_book_list_ui() is needed if due dates are shown there or affect availability. For now, focus on loan list.
+        else:
+            messagebox.showerror("Error", "No se pudo extender el préstamo. Verifique la consola para más detalles.")
 
     def refresh_current_loans_list(self):
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
