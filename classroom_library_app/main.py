@@ -929,6 +929,44 @@ class App(ctk.CTk):
         self.um_clear_form_button = ctk.CTkButton(add_user_outer_frame, text="Limpiar Formulario", font=BUTTON_FONT, command=self.clear_user_form_ui, corner_radius=8, fg_color="gray50", hover_color="gray60") # Translated
         self.um_clear_form_button.grid(row=6, column=2, padx=(5,10), pady=15, sticky="ew")
 
+        # --- Import Students CSV Section ---
+        import_students_csv_frame = ctk.CTkFrame(main_frame, corner_radius=10)
+        import_students_csv_frame.pack(pady=(10,5), padx=10, fill="x")
+
+        ctk.CTkLabel(import_students_csv_frame, text="📤 Importar Alumnos desde CSV", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,10), padx=10, sticky="w")
+
+        ctk.CTkLabel(import_students_csv_frame, text="Seleccionar Clase:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=8, sticky="w") # Translated
+
+        # Populate classroom combo for CSV import
+        # Note: get_distinct_classrooms() is already defined in student_manager
+        available_classrooms_for_csv = student_manager.get_distinct_classrooms()
+        if not available_classrooms_for_csv: # If no classrooms exist yet, provide a default or guidance
+            available_classrooms_for_csv = ["Primero cree una clase"] # Translated
+            # Consider disabling the import button or combo if no classrooms.
+            # For now, it will show this message. User can type a new class name too.
+
+        self.import_csv_classroom_combo = ctk.CTkComboBox(import_students_csv_frame, values=available_classrooms_for_csv, font=BODY_FONT, dropdown_font=BODY_FONT, width=250)
+        self.import_csv_classroom_combo.grid(row=1, column=1, padx=(0,10), pady=8, sticky="ew")
+        if available_classrooms_for_csv and available_classrooms_for_csv[0] != "Primero cree una clase":
+            self.import_csv_classroom_combo.set(available_classrooms_for_csv[0])
+        else:
+            self.import_csv_classroom_combo.set(available_classrooms_for_csv[0] if available_classrooms_for_csv else "")
+
+
+        import_csv_icon = self.load_icon("import_csv") # Re-use icon if appropriate
+        self.import_students_csv_button = ctk.CTkButton(
+            import_students_csv_frame,
+            text="Seleccionar Archivo CSV e Importar Alumnos",
+            image=import_csv_icon,
+            font=BUTTON_FONT,
+            command=self.import_students_csv_ui,
+            corner_radius=8
+        )
+        self.import_students_csv_button.grid(row=1, column=2, padx=(5,10), pady=8, sticky="ew")
+
+        import_students_csv_frame.columnconfigure(1, weight=1) # Allow combobox to expand a bit
+        import_students_csv_frame.columnconfigure(2, weight=1) # Allow button to expand a bit
+
 
         # --- User List Section ---
         user_list_container = ctk.CTkFrame(main_frame, corner_radius=10)
@@ -1101,17 +1139,47 @@ class App(ctk.CTk):
         user_id = self.selected_user_id_manage_tab
         new_name = self.um_name_entry.get()
         new_classroom = self.um_classroom_combo.get()
-        new_role = self.um_role_combo.get()
+        new_role_spanish = self.um_role_combo.get() # This is the Spanish role from the combobox
 
         if not new_name:
             messagebox.showerror("Error de Entrada", "El campo de nombre no puede estar vacío para una actualización.") # Translated
             self.um_name_entry.focus()
             return
 
-        success = student_manager.update_student_details_db(user_id, new_name, new_classroom, new_role)
+        # Map Spanish role to English for database operations
+        role_map = {
+            "alumno": "student",
+            "líder": "leader",
+            "admin": "admin"
+        }
+        new_role_english = role_map.get(new_role_spanish.lower(), "student") # Default to student if mapping fails
+
+        success = student_manager.update_student_details_db(user_id, new_name, new_classroom, new_role_english)
 
         if success:
-            messagebox.showinfo("Actualización Exitosa", f"Los detalles del usuario '{new_name}' (ID: {user_id[:8]}) han sido actualizados.") # Translated
+            messagebox.showinfo("Actualización Exitosa", f"Los detalles del usuario '{new_name}' (Rol: {new_role_spanish}) han sido actualizados.") # Translated, show Spanish role
+
+            # Check if the user was made a leader and has no password
+            if new_role_english == 'leader':
+                updated_student_details = student_manager.get_student_by_id_db(user_id)
+                if updated_student_details and (updated_student_details.get('hashed_password') is None or updated_student_details.get('hashed_password') == ''):
+                    # Prompt to set password for the new leader
+                    new_leader_password = simpledialog.askstring("Establecer Contraseña para Líder", # Translated
+                                                                 f"El usuario {new_name} ha sido asignado como líder. Por favor, establece una contraseña para este líder:", # Translated
+                                                                 show='*')
+                    if new_leader_password and new_leader_password.strip():
+                        confirm_leader_password = simpledialog.askstring("Confirmar Nueva Contraseña", # Translated
+                                                                         "Confirma la nueva contraseña:", show='*') # Translated
+                        if new_leader_password == confirm_leader_password:
+                            if student_manager.update_student_password_db(user_id, new_leader_password):
+                                messagebox.showinfo("Contraseña Establecida", f"Contraseña para el líder {new_name} establecida con éxito.") # Translated
+                            else:
+                                messagebox.showerror("Error de Contraseña", f"No se pudo establecer la contraseña para {new_name}.") # Translated
+                        else:
+                            messagebox.showwarning("Contraseñas no Coinciden", "Las contraseñas no coinciden. La contraseña no ha sido establecida para el líder.") # Translated
+                    else:
+                        messagebox.showwarning("Contraseña no Establecida", "No se proporcionó contraseña. El líder no tendrá contraseña hasta que se establezca una manualmente.") # Translated
+
             self.clear_user_form_ui(clear_selection=True)
             self.refresh_user_list_ui()
             if hasattr(self, 'refresh_student_list_ui'):
@@ -1167,6 +1235,58 @@ class App(ctk.CTk):
             messagebox.showinfo("Contraseña Restablecida", f"La contraseña para el usuario '{user_name}' ha sido restablecida con éxito.") # Translated
         else:
             messagebox.showerror("Error al Restablecer Contraseña", f"Error al restablecer la contraseña para '{user_name}'.") # Translated
+
+    def import_students_csv_ui(self):
+        selected_classroom = self.import_csv_classroom_combo.get()
+        if not selected_classroom or selected_classroom == "Primero cree una clase": # Translated
+            messagebox.showerror("Error de Selección de Clase", "Por favor, seleccione o introduzca una clase válida para la importación de CSV.") # Translated
+            return
+
+        file_path = filedialog.askopenfilename(
+            title="Seleccionar archivo CSV para importar alumnos", # Translated
+            filetypes=(("Archivos CSV", "*.csv"), ("Todos los archivos", "*.*")) # Translated
+        )
+        if not file_path:
+            return # User cancelled
+
+        success_count, errors = student_manager.import_students_from_csv(file_path, selected_classroom)
+
+        summary_message = f"Resumen de Importación de Alumnos CSV:\n\nAlumnos importados con éxito: {success_count} a la clase '{selected_classroom}'." # Translated
+        if errors:
+            error_details = "\n".join(f"- {e}" for e in errors[:10]) # Show first 10 errors
+            if len(errors) > 10:
+                error_details += f"\n- ... y {len(errors)-10} más errores." # Translated
+            summary_message += f"\n\nErrores encontrados ({len(errors)}):\n{error_details}"
+            messagebox.showwarning("Importación Parcialmente Exitosa o Fallida", summary_message) # Translated
+        else:
+            messagebox.showinfo("Importación Exitosa", summary_message) # Translated
+
+        # Refresh relevant UI elements
+        self.refresh_user_list_ui() # This list shows all users including new students
+        if hasattr(self, 'refresh_student_list_ui'): # If the dedicated student list tab exists
+            self.refresh_student_list_ui()
+
+        # Refresh classroom comboboxes in case a new classroom was implicitly created by typing it in
+        # or if the list of distinct classrooms needs updating generally.
+        updated_classrooms = student_manager.get_distinct_classrooms()
+        if not updated_classrooms: updated_classrooms = ["(Vacío)"] # Translated
+
+        self.import_csv_classroom_combo.configure(values=updated_classrooms)
+        # Try to keep current selection if it's still valid, else set to first
+        if selected_classroom in updated_classrooms:
+            self.import_csv_classroom_combo.set(selected_classroom)
+        elif updated_classrooms[0] != "(Vacío)":
+            self.import_csv_classroom_combo.set(updated_classrooms[0])
+        else:
+             self.import_csv_classroom_combo.set(updated_classrooms[0])
+
+
+        # Also update classroom combos in other relevant places if they exist
+        if hasattr(self, 'um_classroom_combo'):
+             self.um_classroom_combo.configure(values=updated_classrooms + ["OficinaAdmin"]) # Assuming AdminOffice is special
+        if hasattr(self, 'student_classroom_combo'): # In manage_students_tab (original)
+             self.student_classroom_combo.configure(values=updated_classrooms)
+
 
     def setup_leaderboard_tab(self):
        tab = self.leaderboard_tab # Use the instance variable for the tab
