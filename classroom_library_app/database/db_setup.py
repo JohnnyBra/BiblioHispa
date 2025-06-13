@@ -3,7 +3,7 @@ import os
 import uuid
 import hashlib
 # Assuming utils.py is in the parent directory (classroom_library_app/)
-from ..utils import get_data_path
+from utils import get_data_path
 
 DB_NAME = "library.db"
 DB_DIR = "database" # This is the name of the folder *within* the app data structure
