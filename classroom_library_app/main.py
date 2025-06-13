@@ -649,12 +649,21 @@ class App(ctk.CTk):
 
         # Populate Return Book ComboBox
         # Using current_leader_classroom as the ubicacion_filter for get_current_loans_db
-        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
+        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=None)
         self.return_book_map = {}
         return_book_display_names = []
         for loan in active_loans_in_ubicacion:
             # loan dict now contains 'titulo', 'borrower_name', 'due_date', 'loan_id'
-            display_text = f"{loan.get('titulo', 'N/A')} (Borrower: {loan.get('borrower_name', 'N/A')}) Due: {loan.get('due_date', 'N/A')}"
+            due_date_str = loan.get('due_date', 'N/A')
+            due_date_display = 'N/A'
+            if due_date_str != 'N/A':
+                try:
+                    due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
+                    due_date_display = due_date_dt.strftime('%d-%m-%Y')
+                except ValueError:
+                    due_date_display = due_date_str # Fallback if parsing fails
+
+            display_text = f"{loan.get('titulo', 'N/A')} (Prestatario: {loan.get('borrower_name', 'N/A')}) Vence: {due_date_display}"
             self.return_book_map[display_text] = loan['loan_id'] # Map display text to loan_id
             return_book_display_names.append(display_text)
 
@@ -751,9 +760,30 @@ class App(ctk.CTk):
         for i, loan in enumerate(loans): # loan is now a dict from get_current_loans_db
             item_frame = ctk.CTkFrame(self.current_loans_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Book: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
-                      f"Borrower: {loan.get('borrower_name', 'Unknown Student')}\n" \
-                      f"Loaned: {loan.get('loan_date', 'N/A')} | Due: {loan.get('due_date', 'N/A')} (ID: {loan.get('loan_id', '')[:8]}...)"
+
+            loan_date_str = loan.get('loan_date', 'N/A')
+            loan_date_display = 'N/A'
+            if loan_date_str != 'N/A':
+                try:
+                    loan_date_dt = datetime.strptime(loan_date_str, '%Y-%m-%d')
+                    loan_date_display = loan_date_dt.strftime('%d-%m-%Y')
+                except ValueError:
+                    loan_date_display = loan_date_str # Fallback
+
+            due_date_str = loan.get('due_date', 'N/A')
+            due_date_display = 'N/A'
+            if due_date_str != 'N/A':
+                try:
+                    due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
+                    due_date_display = due_date_dt.strftime('%d-%m-%Y')
+                except ValueError:
+                    due_date_display = due_date_str # Fallback
+
+            borrower_name = loan.get('borrower_name', 'Estudiante Desconocido')
+
+            details = f"Libro: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
+                      f"Prestatario: {borrower_name}\n" \
+                      f"Prestado: {loan_date_display} | Vence: {due_date_display} (ID: {loan.get('loan_id', '')[:8]}...)"
             label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w")
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
@@ -775,17 +805,27 @@ class App(ctk.CTk):
             item_frame = ctk.CTkFrame(self.reminders_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             item_frame.pack(fill="x", pady=(2,0), padx=5)
 
-            due_date = datetime.strptime(book['due_date'], '%Y-%m-%d').date()
-            is_overdue = due_date < today
+            due_date_str = book['due_date']
+            due_date_display = 'N/A'
+            is_overdue = False # Default
+            if due_date_str != 'N/A':
+                try:
+                    due_date_dt_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
+                    due_date_display = due_date_dt_obj.strftime('%d-%m-%Y')
+                    is_overdue = due_date_dt_obj.date() < today
+                except ValueError:
+                    due_date_display = due_date_str # Fallback
 
-            details = f"Book: {book['title']}\n" \
-                      f"Borrower: {book.get('borrower_name', 'Unknown')}\n" \
-                      f"Due Date: {book['due_date']}"
+            borrower_name = book.get('borrower_name', 'Desconocido')
+
+            details = f"Libro: {book['titulo']}\n" \
+                      f"Prestatario: {borrower_name}\n" \
+                      f"Fecha Vencimiento: {due_date_display}"
 
             text_color = ("#D03030", "#E04040") if is_overdue else (None, None) # CustomTkinter default if None
             font_weight = "bold" if is_overdue else "normal"
 
-            if is_overdue: details += " (OVERDUE)"
+            if is_overdue: details += " (VENCIDO)"
 
             label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", text_color=text_color[0] if ctk.get_appearance_mode().lower() == "light" else text_color[1], font=ctk.CTkFont(weight=font_weight))
             label.pack(pady=5, padx=10, fill="x", expand=True)
@@ -933,7 +973,13 @@ class App(ctk.CTk):
             item_frame._original_bg = original_bg # Store original color for de-selection
 
             # User details
-            details_text = f"👤 {user['name']} ({user['role']}) - 🏫 {user['classroom']}" # Keep classroom as it's from DB, role might need translation if roles are translated in DB/logic
+            role_display_map = {
+                "student": "alumno",
+                "leader": "líder",
+                "admin": "admin"
+            }
+            display_role = role_display_map.get(user['role'], user['role']) # Fallback to original if no map found
+            details_text = f"👤 {user['name']} ({display_role}) - 🏫 {user['classroom']}" # Keep classroom as it's from DB, role might need translation if roles are translated in DB/logic
             # Small ID display: f"ID: {user_id[:8]}..."
             id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray") # "ID" is common
             id_label.pack(side="right", padx=(0,10), pady=2)
