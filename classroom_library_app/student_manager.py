@@ -89,7 +89,7 @@ def get_student_by_id_db(student_id):
         conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row # Access columns by name
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, classroom, role, hashed_password, salt FROM students WHERE id = ?", (student_id,))
+        cursor.execute("SELECT id, name, classroom, role, points, hashed_password, salt FROM students WHERE id = ?", (student_id,)) # Added 'points'
         student_row = cursor.fetchone()
         return dict(student_row) if student_row else None
     except sqlite3.Error as e:
@@ -107,7 +107,7 @@ def get_students_db(classroom_filter=None, role_filter=None):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        query = "SELECT id, name, classroom, role, hashed_password, salt FROM students"
+        query = "SELECT id, name, classroom, role, points, hashed_password, salt FROM students" # Added 'points'
         filters = []
         params = []
 

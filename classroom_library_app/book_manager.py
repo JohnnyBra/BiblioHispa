@@ -229,6 +229,18 @@ def loan_book_db(book_id, student_id, due_date_str, lending_student_leader_id):
             INSERT INTO loans (loan_id, book_id, student_id, loan_date, due_date)
             VALUES (?, ?, ?, ?, ?)
         """, (loan_id, book_id, student_id, loan_date_str, due_date_str))
+
+        # --- Add points for borrowing ---
+        try:
+            points_for_borrowing = 10 # Example: 10 points for borrowing a book
+            cursor.execute("UPDATE students SET points = points + ? WHERE id = ?", (points_for_borrowing, student_id))
+            print(f"Awarded {points_for_borrowing} points to student {student_id} for borrowing book {book_id}.") # Optional logging
+        except sqlite3.Error as e:
+            print(f"Error awarding points during loan: {e}")
+            # This error should cause the transaction to be rolled back by the outer catch block if commit is not reached.
+            raise # Re-raise the exception to ensure transaction rollback
+        # --- End points for borrowing ---
+
         conn.commit()
 
         print(f"Book '{book_id}' loaned to student '{student_id}' successfully. Loan ID: {loan_id}")
@@ -236,13 +248,15 @@ def loan_book_db(book_id, student_id, due_date_str, lending_student_leader_id):
 
     except sqlite3.Error as e:
         print(f"Database error in loan_book_db: {e}")
+        if conn:
+            conn.rollback() # Ensure rollback on SQLite error
         return False
     finally:
         if conn:
             conn.close()
 
-def return_book_db(loan_id, student_leader_id):
-    """Removes a loan record from the 'loans' table upon book return."""
+def return_book_db(loan_id, student_leader_id, worksheet_submitted=False):
+    """Removes a loan record from the 'loans' table upon book return and applies gamification points."""
     if not student_manager.is_student_leader(student_leader_id):
         print(f"Return Error: Returning student {student_leader_id} is not a leader or does not exist.")
         return False
@@ -251,23 +265,73 @@ def return_book_db(loan_id, student_leader_id):
         print("Return Error: Loan ID cannot be empty.")
         return False
 
-    conn = None # Ensure conn is defined for the finally block
+    conn = None
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
+        conn.execute("BEGIN TRANSACTION;") # Start transaction
 
-        cursor.execute("DELETE FROM loans WHERE loan_id = ?", (loan_id,))
-        conn.commit()
+        # --- Gamification Logic: Step 1 - Fetch loan details BEFORE deleting ---
+        cursor.execute("SELECT student_id, due_date, early_return_bonus_applied FROM loans WHERE loan_id = ?", (loan_id,))
+        loan_details = cursor.fetchone()
 
-        if cursor.rowcount > 0:
-            print(f"Loan ID '{loan_id}' returned successfully.")
-            return True
-        else:
-            print(f"Return Error: No loan found with ID '{loan_id}', or failed to delete.")
+        if not loan_details:
+            print(f"Error: Loan ID {loan_id} not found for gamification or return.")
+            conn.rollback() # Rollback if loan not found
             return False
+
+        student_id, due_date_str, early_bonus_applied_val = loan_details
+        early_bonus_already_applied = bool(early_bonus_applied_val)
+        points_to_award = 0
+
+        # 1. Base points for returning
+        points_to_award += 5
+
+        # 2. Worksheet bonus
+        if worksheet_submitted:
+            points_to_award += 15
+            # Mark worksheet as submitted for this loan
+            cursor.execute("UPDATE loans SET worksheet_submitted = 1 WHERE loan_id = ?", (loan_id,))
+
+
+        # 3. Early return bonus
+        if due_date_str and not early_bonus_already_applied: # Check if bonus not already applied
+            try:
+                due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                if datetime.now().date() < due_date_dt:
+                    points_to_award += 5
+                    # Mark bonus as applied for this loan
+                    cursor.execute("UPDATE loans SET early_return_bonus_applied = 1 WHERE loan_id = ?", (loan_id,))
+            except ValueError as ve:
+                print(f"Warning: Could not parse due_date '{due_date_str}' for loan {loan_id} during gamification: {ve}")
+
+        # Update student's total points
+        if points_to_award > 0:
+            cursor.execute("UPDATE students SET points = points + ? WHERE id = ?", (points_to_award, student_id))
+
+        # --- Main Return Logic: Step 2 - Delete the loan record ---
+        cursor.execute("DELETE FROM loans WHERE loan_id = ?", (loan_id,))
+
+        if cursor.rowcount == 0:
+            # This means the loan was not found by the DELETE, which is unexpected if SELECT found it.
+            # This could indicate a concurrent deletion or an issue with loan_id.
+            print(f"Error: Failed to delete loan ID '{loan_id}'. Loan might have been deleted concurrently.")
+            conn.rollback()
+            return False
+
+        conn.commit() # Commit all changes (gamification and deletion)
+        print(f"Loan ID '{loan_id}' returned successfully. Points awarded: {points_to_award}")
+        return True
 
     except sqlite3.Error as e:
         print(f"Database error in return_book_db for loan_id {loan_id}: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    except ValueError as ve:
+        print(f"Date format error for loan ID {loan_id} in return_book_db: {ve}")
+        if conn:
+            conn.rollback()
         return False
     finally:
         if conn:

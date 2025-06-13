@@ -477,7 +477,7 @@ class App(ctk.CTk):
         for i, student in enumerate(students):
             student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             student_item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Nombre: {student['name']} ({student['role']})\nClase: {student['classroom']} | ID: {student['id']}" # Translated
+            details = f"Nombre: {student['name']} ({student['role']}) - Puntos: {student.get('points', 0)}\nClase: {student['classroom']} | ID: {student['id']}" # Translated & Points Added
             label = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w")
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
@@ -537,13 +537,17 @@ class App(ctk.CTk):
         self.return_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
         return_frame.columnconfigure(1, weight=1)
 
+        self.worksheet_submitted_checkbox = ctk.CTkCheckBox(return_frame, text="Hoja de trabajo entregada", font=BODY_FONT)
+        self.worksheet_submitted_checkbox.configure(state="disabled")
+        self.worksheet_submitted_checkbox.grid(row=2, column=0, columnspan=2, padx=5, pady=(5,5), sticky="w")
+
         return_icon = self.load_icon("return_book")
         return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Translated
-        return_button.grid(row=2, column=0, columnspan=2, pady=15, sticky="ew")
+        return_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Shifted to row 3
 
         extend_loan_icon = self.load_icon("extend_loan")
         self.extend_loan_button = ctk.CTkButton(return_frame, text="Extender Préstamo", image=extend_loan_icon, font=BUTTON_FONT, state="disabled", corner_radius=8, command=self.extend_loan_ui)
-        self.extend_loan_button.grid(row=3, column=0, columnspan=2, pady=(5,15), sticky="ew")
+        self.extend_loan_button.grid(row=4, column=0, columnspan=2, pady=(5,15), sticky="ew") # Shifted to row 4
 
         right_frame = ctk.CTkFrame(main_loan_content_frame, fg_color="transparent")
         right_frame.pack(side="left", expand=True, fill="both", padx=(10,0), pady=0)
@@ -739,13 +743,18 @@ class App(ctk.CTk):
             messagebox.showerror("Internal Error", "Could not resolve loan ID for return from selection.")
             return
 
+        is_worksheet_submitted = bool(self.worksheet_submitted_checkbox.get())
+
         # Call the updated book_manager.return_book_db with loan_id
-        success = book_manager.return_book_db(loan_id, self.current_leader_id)
+        success = book_manager.return_book_db(loan_id, self.current_leader_id, worksheet_submitted=is_worksheet_submitted)
 
         if success:
             messagebox.showinfo("Success", f"Loan returned successfully.")
             self.refresh_loan_related_combos_and_lists()
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
+            self.worksheet_submitted_checkbox.deselect()
+            # Ensure the checkbox state is updated based on new combo selection
+            self.on_return_book_selection_change(self.return_book_combo.get())
         else:
             messagebox.showerror("Return Failed", "Failed to return book. Check console (loan ID might be invalid or other DB error).")
 
@@ -754,8 +763,11 @@ class App(ctk.CTk):
         loan_id = self.return_book_map.get(selection)
         if loan_id:
             self.extend_loan_button.configure(state="normal")
+            self.worksheet_submitted_checkbox.configure(state="normal")
         else:
             self.extend_loan_button.configure(state="disabled")
+            self.worksheet_submitted_checkbox.configure(state="disabled")
+            self.worksheet_submitted_checkbox.deselect()
 
     def extend_loan_ui(self):
         selected_loan_display_text = self.return_book_combo.get()
@@ -1011,7 +1023,7 @@ class App(ctk.CTk):
                 "admin": "admin"
             }
             display_role = role_display_map.get(user['role'], user['role']) # Fallback to original if no map found
-            details_text = f"👤 {user['name']} ({display_role}) - 🏫 {user['classroom']}" # Keep classroom as it's from DB, role might need translation if roles are translated in DB/logic
+            details_text = f"👤 {user['name']} ({display_role}) - Puntos: {user.get('points', 0)} - 🏫 {user['classroom']}" # Points Added
             # Small ID display: f"ID: {user_id[:8]}..."
             id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray") # "ID" is common
             id_label.pack(side="right", padx=(0,10), pady=2)
