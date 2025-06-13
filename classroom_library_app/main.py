@@ -518,14 +518,14 @@ class App(ctk.CTk):
         self.borrower_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
         self.borrower_combo.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
 
-        ctk.CTkLabel(lend_frame, text="Fecha de Devolución:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w") # Translated "Due Date"
-        self.due_date_entry = ctk.CTkEntry(lend_frame, placeholder_text=(datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d'), width=280, font=BODY_FONT)
-        self.due_date_entry.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
+        # ctk.CTkLabel(lend_frame, text="Fecha de Devolución:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w") # Translated "Due Date"
+        # self.due_date_entry = ctk.CTkEntry(lend_frame, placeholder_text=(datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d'), width=280, font=BODY_FONT)
+        # self.due_date_entry.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
         lend_frame.columnconfigure(1, weight=1)
 
         lend_icon = self.load_icon("lend_book")
         lend_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
-        lend_button.grid(row=4, column=0, columnspan=2, pady=15, sticky="ew")
+        lend_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Adjusted row from 4 to 3
 
         # --- Return Book Section ---
         return_frame = ctk.CTkFrame(left_frame, corner_radius=8)
@@ -671,22 +671,22 @@ class App(ctk.CTk):
 
         book_display_name = self.lend_book_combo.get()
         borrower_display_name = self.borrower_combo.get()
-        due_date_str = self.due_date_entry.get()
+        # due_date_str = self.due_date_entry.get() # Removed
 
         if book_display_name == "No available books" or borrower_display_name == "No students in class":
             messagebox.showerror("Input Error", "Please select a valid book and borrower.")
             return
 
-        if not due_date_str:
-            messagebox.showerror("Input Error", "Due date is required.")
-            return
-        try:
-            # Validate due_date_str format, but allow it to be in the past for flexibility if needed,
-            # though typically it should be in the future.
-            datetime.strptime(due_date_str, '%Y-%m-%d')
-        except ValueError:
-            messagebox.showerror("Input Error", "Invalid date format for Due Date. Use YYYY-MM-DD.")
-            return
+        # if not due_date_str: # Removed
+        #     messagebox.showerror("Input Error", "Due date is required.")
+        #     return
+        # try: # Removed
+        #     # Validate due_date_str format, but allow it to be in the past for flexibility if needed,
+        #     # though typically it should be in the future.
+        #     datetime.strptime(due_date_str, '%Y-%m-%d')
+        # except ValueError: # Removed
+        #     messagebox.showerror("Input Error", "Invalid date format for Due Date. Use YYYY-MM-DD.")
+        #     return
 
         book_id = self.lend_book_map.get(book_display_name)
         borrower_id = self.borrower_student_map.get(borrower_display_name)
@@ -695,12 +695,16 @@ class App(ctk.CTk):
             messagebox.showerror("Internal Error", "Could not resolve book or borrower ID from selection.")
             return
 
+        # Calculate due date: 2 weeks from now
+        due_date_calculated = datetime.now() + timedelta(days=14)
+        due_date_str_for_db = due_date_calculated.strftime('%Y-%m-%d')
+
         # Call the updated book_manager.loan_book_db
-        success = book_manager.loan_book_db(book_id, borrower_id, due_date_str, self.current_leader_id)
+        success = book_manager.loan_book_db(book_id, borrower_id, due_date_str_for_db, self.current_leader_id)
 
         if success:
             messagebox.showinfo("Success", f"Book '{book_display_name.split(' (by ')[0]}' loaned to {borrower_display_name}.")
-            self.due_date_entry.delete(0, 'end') # Clear entry for next use
+            # self.due_date_entry.delete(0, 'end') # Clear entry for next use - Removed
             self.refresh_loan_related_combos_and_lists()
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
         else:
@@ -761,7 +765,7 @@ class App(ctk.CTk):
             return
 
         # Use current_leader_classroom as ubicacion_filter
-        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=None) # Filter removed
+        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=None)
         if not due_soon_loans:
             ctk.CTkLabel(self.reminders_frame, text=f"No books due soon or overdue in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
