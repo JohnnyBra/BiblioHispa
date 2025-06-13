@@ -626,7 +626,7 @@ class App(ctk.CTk):
 
         # Populate Lend Book ComboBox
         # Books from the selected leader's ubicacion
-        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=self.current_leader_classroom)
+        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=None)
 
         lend_book_display_names = []
         self.lend_book_map = {}
@@ -739,7 +739,7 @@ class App(ctk.CTk):
              return
 
         # Use current_leader_classroom as ubicacion_filter
-        loans = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
+        loans = book_manager.get_current_loans_db(ubicacion_filter=None)
         if not loans:
             ctk.CTkLabel(self.current_loans_frame, text=f"No books currently loaned out in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
@@ -761,13 +761,13 @@ class App(ctk.CTk):
             return
 
         # Use current_leader_classroom as ubicacion_filter
-        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=self.current_leader_classroom)
+        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=None) # Filter removed
         if not due_soon_loans:
             ctk.CTkLabel(self.reminders_frame, text=f"No books due soon or overdue in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
 
         today = datetime.now().date()
-        for i, book in enumerate(due_soon_books):
+        for i, book in enumerate(due_soon_loans): # Corrected variable name here
             item_frame = ctk.CTkFrame(self.reminders_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             item_frame.pack(fill="x", pady=(2,0), padx=5)
 
