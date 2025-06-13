@@ -967,9 +967,9 @@ class App(ctk.CTk):
         password = self.um_password_entry.get()
         confirm_password = self.um_confirm_password_entry.get()
         classroom = self.um_classroom_combo.get()
-        role = self.um_role_combo.get()
+        role_spanish = self.um_role_combo.get()
 
-        if not name or not password or not confirm_password or not classroom or not role:
+        if not name or not password or not confirm_password or not classroom or not role_spanish:
             messagebox.showerror("Error de Entrada", "Todos los campos (Nombre, Contraseña, Confirmar Contraseña, Clase/Oficina, Rol) son requeridos.") # Translated
             return
         if password != confirm_password:
@@ -979,9 +979,16 @@ class App(ctk.CTk):
             self.um_password_entry.focus()
             return
 
-        student_id = student_manager.add_student_db(name, classroom, password, role)
+        role_map = {
+            "alumno": "student",
+            "líder": "leader",
+            "admin": "admin"
+        }
+        role_english = role_map.get(role_spanish.lower(), "student") # Default to student
+
+        student_id = student_manager.add_student_db(name, classroom, password, role_english)
         if student_id:
-            messagebox.showinfo("Éxito", f"Usuario '{name}' añadido con éxito. ID: {student_id}") # Translated
+            messagebox.showinfo("Éxito", f"Usuario '{name}' ({role_english}) añadido con éxito. ID: {student_id}") # Translated
             self.clear_user_form_ui(clear_selection=False)
             self.refresh_user_list_ui()
             if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
