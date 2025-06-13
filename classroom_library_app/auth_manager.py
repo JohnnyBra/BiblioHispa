@@ -1,6 +1,6 @@
 # auth_manager.py
 
-from . import student_manager # Use . to indicate relative import within the package
+import student_manager # Use . to indicate relative import within the package
 
 # Session Management Variables
 current_user_id = None

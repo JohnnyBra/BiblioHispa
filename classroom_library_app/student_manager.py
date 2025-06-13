@@ -2,8 +2,20 @@ import sqlite3
 import uuid
 import hashlib
 import os
+from utils import get_data_path
 
-DB_PATH = 'database/library.db' # Using the same database file
+# DB_PATH = 'database/library.db' # Using the same database file
+
+# DB_PATH_FOR_CODE is the relative path string that get_data_path will use.
+DB_PATH_FOR_CODE = os.path.join("database", "library.db")
+
+def _get_resolved_db_path():
+    # This helper ensures the database directory exists.
+    path = get_data_path(DB_PATH_FOR_CODE)
+    # Ensure the directory for the database exists, especially for development.
+    # PyInstaller typically handles the creation of bundled directories.
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return path
 
 def generate_student_id():
     """Generates a unique ID for a student."""
@@ -52,7 +64,7 @@ def add_student_db(name, classroom, password, role='student'):
     student_id = generate_student_id()
     salt_hex, hashed_password_hex = hash_password(password)
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO students (id, name, classroom, role, hashed_password, salt)
@@ -71,7 +83,7 @@ def get_student_by_id_db(student_id):
     """Fetches a single student by their ID.
     Returns a dictionary representing the student, or None if not found."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row # Access columns by name
         cursor = conn.cursor()
         cursor.execute("SELECT id, name, classroom, role, hashed_password, salt FROM students WHERE id = ?", (student_id,))
@@ -88,7 +100,7 @@ def get_students_db(classroom_filter=None, role_filter=None):
     """Fetches a list of students, with optional filters for classroom and role.
     Returns a list of dictionaries."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(_get_resolved_db_path())
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -128,7 +140,7 @@ def delete_student_db(student_id):
     """Deletes a student from the database by their ID.
     Returns True on successful deletion, False otherwise."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
         cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
         conn.commit()
@@ -146,7 +158,7 @@ def update_student_password_db(student_id, new_password):
     Returns True on successful update, False otherwise."""
     new_salt_hex, new_hashed_password_hex = hash_password(new_password)
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE students
@@ -167,7 +179,7 @@ def update_student_details_db(student_id, name, classroom, role):
     Password and salt are not affected.
     Returns True on successful update, False otherwise."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE students
