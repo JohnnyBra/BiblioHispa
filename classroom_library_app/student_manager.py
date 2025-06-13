@@ -42,6 +42,9 @@ def hash_password(password, salt=None):
 
 def verify_password(stored_hashed_password_hex, salt_hex, provided_password):
     """Verifies a provided password against a stored hash and salt."""
+    if not stored_hashed_password_hex or not salt_hex:
+        return False # Cannot verify if hash or salt is missing
+
     try:
         # Convert hex salt and stored_hashed_password back to bytes
         salt = bytes.fromhex(salt_hex)
@@ -55,7 +58,7 @@ def verify_password(stored_hashed_password_hex, salt_hex, provided_password):
             100000
         )
         return provided_password_hashed == stored_hashed_password
-    except (ValueError, TypeError): # Handle potential errors from hex conversion
+    except (ValueError, TypeError): # Handle potential errors from hex conversion (e.g., non-hex string)
         return False
 
 def add_student_db(name, classroom, password, role='student'):
