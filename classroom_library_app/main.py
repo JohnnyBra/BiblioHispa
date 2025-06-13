@@ -471,9 +471,10 @@ class App(ctk.CTk):
         if student_id:
             messagebox.showinfo("¡Fantástico! ✨", f"¡El alumno '{name}' se ha unido al listado!") # Translated
             self.student_name_entry.delete(0, "end")
-            self.refresh_student_list_ui()
-            if hasattr(self, 'refresh_leader_selector_combo'):
-                 self.refresh_leader_selector_combo()
+            # self.refresh_student_list_ui() # This will be covered by refresh_all_classroom_displays
+            # if hasattr(self, 'refresh_leader_selector_combo'):
+            #      self.refresh_leader_selector_combo() # Also covered by refresh_all_classroom_displays
+            self.refresh_all_classroom_displays() # Ensure all classroom lists are updated
         else:
             messagebox.showerror("¡Oh No! 💔", "Algo salió mal al añadir el alumno. Revisa la consola.") # Translated
 
@@ -1166,13 +1167,23 @@ class App(ctk.CTk):
         }
         role_english = role_map.get(role_spanish.lower(), "student") # Default to student
 
+        # Validate classroom input
+        if not classroom or classroom == "N/A" or classroom == "OficinaAdmin" and role_english != "admin": # Basic validation, "OficinaAdmin" might be special
+             # More specific error if trying to assign non-admin to AdminOffice, or just general invalid class
+            if classroom == "OficinaAdmin" and role_english != "admin":
+                messagebox.showerror("Error de Entrada", "Solo los administradores pueden ser asignados a 'OficinaAdmin'.")
+            else:
+                messagebox.showerror("Error de Entrada", "Por favor, seleccione o introduzca un nombre de clase/oficina válido.")
+            return
+
         student_id = student_manager.add_student_db(name, classroom, password, role_english)
         if student_id:
             messagebox.showinfo("Éxito", f"Usuario '{name}' ({role_english}) añadido con éxito. ID: {student_id}") # Translated
-            self.clear_user_form_ui(clear_selection=False)
-            self.refresh_user_list_ui()
-            if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
-            if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo()
+            self.clear_user_form_ui(clear_selection=False) # Keep form data for quick multi-add if desired, but clear selection
+            # self.refresh_user_list_ui() # Covered by refresh_all_classroom_displays
+            # if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui() # Covered
+            # if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo() # Covered
+            self.refresh_all_classroom_displays()
         else:
             messagebox.showerror("Error de Base de Datos", f"Error al añadir usuario '{name}'. Revisa la consola para más detalles.") # Translated
 
@@ -1182,13 +1193,17 @@ class App(ctk.CTk):
             return
 
         user_id = self.selected_user_id_manage_tab
-        new_name = self.um_name_entry.get()
-        new_classroom = self.um_classroom_combo.get()
+        new_name = self.um_name_entry.get().strip()
+        new_classroom = self.um_classroom_combo.get().strip()
         new_role_spanish = self.um_role_combo.get() # This is the Spanish role from the combobox
 
         if not new_name:
             messagebox.showerror("Error de Entrada", "El campo de nombre no puede estar vacío para una actualización.") # Translated
             self.um_name_entry.focus()
+            return
+
+        if not new_classroom or new_classroom == "N/A": # Basic validation for classroom
+            messagebox.showerror("Error de Entrada", "Por favor, seleccione o introduzca un nombre de clase/oficina válido para la actualización.")
             return
 
         # Map Spanish role to English for database operations
@@ -1225,12 +1240,12 @@ class App(ctk.CTk):
                     else:
                         messagebox.showwarning("Contraseña no Establecida", "No se proporcionó contraseña. El líder no tendrá contraseña hasta que se establezca una manualmente.") # Translated
 
+
             self.clear_user_form_ui(clear_selection=True)
-            self.refresh_user_list_ui()
-            if hasattr(self, 'refresh_student_list_ui'):
-                self.refresh_student_list_ui()
-            if hasattr(self, 'refresh_leader_selector_combo'):
-                self.refresh_leader_selector_combo()
+            # self.refresh_user_list_ui() # Covered
+            # if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui() # Covered
+            # if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo() # Covered
+            self.refresh_all_classroom_displays()
         else:
             messagebox.showerror("Actualización Fallida", f"No se pudieron actualizar los detalles para el usuario '{new_name}'. Por favor, revisa la consola.") # Translated
 
