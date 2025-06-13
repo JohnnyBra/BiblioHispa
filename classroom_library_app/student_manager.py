@@ -209,6 +209,57 @@ def is_student_leader(student_id):
         return True
     return False
 
+def get_students_sorted_by_points(classroom_filter=None):
+    conn = None
+    students_list = []
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        conn.row_factory = sqlite3.Row # Use row_factory for dictionary-like row access
+        cursor = conn.cursor()
+
+        query = "SELECT id, name, points, classroom FROM students"
+        params = []
+
+        # Check against display values used in UI for "Global"
+        if classroom_filter and classroom_filter.lower() != "global" and classroom_filter.lower() != "🏆 global":
+            query += " WHERE classroom = ?"
+            params.append(classroom_filter)
+
+        query += " ORDER BY points DESC"
+
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+
+        for row in rows:
+            # sqlite3.Row objects can be directly converted to dicts
+            students_list.append(dict(row))
+
+        return students_list
+
+    except sqlite3.Error as e:
+        print(f"Database error in get_students_sorted_by_points: {e}")
+        return [] # Return empty list on error
+    finally:
+        if conn:
+            conn.close()
+
+def get_distinct_classrooms():
+    conn = None
+    classrooms = []
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        # conn.row_factory = sqlite3.Row # Not strictly necessary for single column fetch
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT classroom FROM students WHERE classroom IS NOT NULL AND classroom != '' ORDER BY classroom")
+        rows = cursor.fetchall()
+        classrooms = [row[0] for row in rows]
+    except sqlite3.Error as e:
+        print(f"Database error in get_distinct_classrooms: {e}")
+    finally:
+        if conn:
+            conn.close()
+    return classrooms
+
 if __name__ == '__main__':
     # This section is for testing purposes.
     # Ensure db_setup.py has been run or main.py to create tables.

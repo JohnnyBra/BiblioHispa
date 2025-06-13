@@ -134,6 +134,9 @@ class App(ctk.CTk):
         if hasattr(self, 'setup_manage_students_tab'): self.setup_manage_students_tab() # Original student management
         if hasattr(self, 'setup_manage_loans_tab'): self.setup_manage_loans_tab()
 
+        self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
+        self.setup_leaderboard_tab() # Call the new method
+
         # Deiconify (show) the main window now that UI is initialized
         self.deiconify()
 
@@ -1164,6 +1167,135 @@ class App(ctk.CTk):
             messagebox.showinfo("Contraseña Restablecida", f"La contraseña para el usuario '{user_name}' ha sido restablecida con éxito.") # Translated
         else:
             messagebox.showerror("Error al Restablecer Contraseña", f"Error al restablecer la contraseña para '{user_name}'.") # Translated
+
+    def setup_leaderboard_tab(self):
+       tab = self.leaderboard_tab # Use the instance variable for the tab
+       tab.configure(fg_color=("#E0F7FA", "#2C3E50")) # Example color, adjust as needed
+
+       # --- Controls Frame ---
+       controls_frame = ctk.CTkFrame(tab, corner_radius=10)
+       controls_frame.pack(pady=10, padx=10, fill="x")
+
+       ctk.CTkLabel(controls_frame, text="Ver:", font=BODY_FONT).pack(side="left", padx=(10,5), pady=10)
+
+       self.leaderboard_filter_type_combo = ctk.CTkSegmentedButton(controls_frame,
+                                                                  values=["🏆 Global", "🏫 Por Clase"],
+                                                                  font=BUTTON_FONT,
+                                                                  # command will be added later
+                                                                  )
+       self.leaderboard_filter_type_combo.pack(side="left", padx=5, pady=10)
+       self.leaderboard_filter_type_combo.set("🏆 Global") # Default selection
+
+       self.leaderboard_class_filter_combo = ctk.CTkComboBox(controls_frame,
+                                                               values=[], # To be populated later
+                                                               font=BODY_FONT,
+                                                               dropdown_font=BODY_FONT,
+                                                               state="disabled", # Enabled when "Por Clase" is selected
+                                                               # command will be added later
+                                                               )
+       self.leaderboard_class_filter_combo.pack(side="left", padx=5, pady=10)
+
+       refresh_icon = self.load_icon("refresh") # Assumes you have a refresh icon
+       self.leaderboard_refresh_button = ctk.CTkButton(controls_frame, text="Refrescar",
+                                                      image=refresh_icon, font=BUTTON_FONT,
+                                                      # command will be added later
+                                                      width=100, corner_radius=8)
+       self.leaderboard_refresh_button.pack(side="right", padx=10, pady=10)
+
+       # --- Leaderboard Display Area ---
+       self.leaderboard_scroll_frame = ctk.CTkScrollableFrame(tab, label_text="Tabla de Clasificación",
+                                                              label_font=HEADING_FONT, corner_radius=10)
+       self.leaderboard_scroll_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
+
+       # Configure commands for filters
+       self.leaderboard_filter_type_combo.configure(command=self.on_leaderboard_filter_type_change)
+       self.leaderboard_class_filter_combo.configure(command=self.refresh_leaderboard_display) # Refresh on class change
+       self.leaderboard_refresh_button.configure(command=self.refresh_leaderboard_display)
+
+       # Initial population and setup of class filter
+       self.on_leaderboard_filter_type_change(self.leaderboard_filter_type_combo.get())
+
+    def on_leaderboard_filter_type_change(self, selection=None): # selection is passed from segmented button
+        if selection == "🏫 Por Clase":
+            classrooms = student_manager.get_distinct_classrooms()
+            if not classrooms: # Handle case with no classrooms
+                classrooms = ["No hay clases"] # Placeholder
+                self.leaderboard_class_filter_combo.configure(state="disabled", values=classrooms)
+                self.leaderboard_class_filter_combo.set(classrooms[0])
+            else:
+                self.leaderboard_class_filter_combo.configure(state="normal", values=classrooms)
+                self.leaderboard_class_filter_combo.set(classrooms[0]) # Select first class by default
+        else: # "🏆 Global"
+            self.leaderboard_class_filter_combo.configure(state="disabled", values=[])
+            self.leaderboard_class_filter_combo.set("") # Clear selection or set to a placeholder
+
+        self.refresh_leaderboard_display()
+
+    def refresh_leaderboard_display(self):
+        # Clear existing leaderboard entries
+        for widget in self.leaderboard_scroll_frame.winfo_children():
+            widget.destroy()
+
+        filter_type = self.leaderboard_filter_type_combo.get()
+        classroom_to_filter = None
+
+        if filter_type == "🏫 Por Clase":
+            classroom_to_filter = self.leaderboard_class_filter_combo.get()
+            # Assuming "Todas las Clases" might be a placeholder if class combo is populated with it.
+            if not classroom_to_filter or classroom_to_filter == "Todas las Clases":
+                # If no specific class or "All Classes" is selected in "Por Clase" mode,
+                # effectively treat as global or show specific message.
+                # For this implementation, if "Todas las Clases" is selected, it means no specific class filter.
+                # However, student_manager.get_students_sorted_by_points expects None for global.
+                # We'll rely on the segmented button's "Global" value to pass None.
+                # If "Por Clase" is selected but the class combo has a "All Classes" type of value,
+                # this might mean we should show all, or prompt user, or disable this state.
+                # For now, if classroom_to_filter is "Todas las Clases", we set it to None
+                # to fetch all students, which might be confusing if "Por Clase" is selected.
+                # This logic might need refinement based on how class_filter_combo is populated.
+                if classroom_to_filter == "Todas las Clases": #This placeholder needs to be consistent if used
+                    classroom_to_filter = None
+                # If classroom_to_filter is empty (e.g. not set), it might also mean fetch all or do nothing.
+                # For now, if it's empty, it will pass None to the backend.
+
+        students_data = student_manager.get_students_sorted_by_points(classroom_filter=classroom_to_filter)
+
+        if not students_data:
+            no_data_label = ctk.CTkLabel(self.leaderboard_scroll_frame, text="No hay datos para mostrar.", font=BODY_FONT)
+            no_data_label.pack(pady=20)
+            return
+
+        entry_icon = self.load_icon("leaderboard_entry") # Generic icon for entries
+
+        for i, student in enumerate(students_data):
+            rank = i + 1
+
+            item_frame = ctk.CTkFrame(self.leaderboard_scroll_frame, corner_radius=6, border_width=1, border_color=("gray80", "gray30"))
+            item_frame.pack(fill="x", pady=(5,0), padx=5)
+
+            rank_label = ctk.CTkLabel(item_frame, text=f"#{rank}", font=(APP_FONT_FAMILY, 16, "bold"))
+            rank_label.pack(side="left", padx=10, pady=10)
+
+            if entry_icon: # Add small icon if loaded
+                icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="")
+                icon_label.pack(side="left", padx=(0,10), pady=10)
+
+            details_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+            details_frame.pack(side="left", padx=10, pady=5, expand=True, fill="x")
+
+            name_text = student.get('name', 'N/A')
+            points_text = student.get('points', 0)
+            classroom_text = student.get('classroom', 'N/A')
+
+            name_label = ctk.CTkLabel(details_frame, text=name_text, font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
+            name_label.pack(fill="x")
+
+            points_label_text = f"{points_text} Puntos"
+            if filter_type == "🏆 Global": # Only show classroom in global view
+                points_label_text += f"  |  Clase: {classroom_text}"
+
+            points_label = ctk.CTkLabel(details_frame, text=points_label_text, font=(APP_FONT_FAMILY, 11), anchor="w")
+            points_label.pack(fill="x")
 
     # def um_toggle_password_visibility(self): # Optional helper
     #     if self.um_show_password_var.get() == "on":
