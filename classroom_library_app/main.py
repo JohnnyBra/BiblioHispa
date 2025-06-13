@@ -4,6 +4,8 @@ from PIL import Image
 from database.db_setup import init_db
 import book_manager
 import student_manager
+import auth_manager # Added for user management context
+from tkinter import simpledialog # Added for password dialogs
 from datetime import datetime, timedelta
 from utils import get_data_path # Import the helper
 
@@ -26,37 +28,119 @@ BUTTON_FONT = (APP_FONT_FAMILY, 12, "bold")
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("📚 Classroom Library Manager 🧸") # Added emojis for fun
-        self.geometry("950x750") # Increased size for better spacing
-
-        # self.configure(fg_color=COLOR_SECONDARY) # Main window background - might be handled by theme
+        self.title("📚 Classroom Library Manager 🧸")
+        self.geometry("950x750")
 
         # Initialize database
-        init_db()
+        init_db() # Ensure DB is set up early
+
         self.current_leader_id = None
         self.current_leader_classroom = None
-        self.icon_cache = {} # For caching loaded icons
+        self.selected_user_id_manage_tab = None
+        self.icon_cache = {}
+        self.login_window = None # Placeholder for the login window
 
+        self.withdraw() # Hide main window initially
+        self.show_login_screen() # Show login screen first
+
+    def show_login_screen(self):
+        if self.login_window is not None and self.login_window.winfo_exists():
+            self.login_window.focus()
+            return
+
+        self.login_window = ctk.CTkToplevel(self)
+        self.login_window.title("Login")
+        self.login_window.geometry("350x250")
+        self.login_window.transient(self) # Make it appear on top of the main window (if visible)
+        self.login_window.grab_set() # Make it modal
+        self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application) # Handle window close
+
+        ctk.CTkLabel(self.login_window, text="Welcome! Please Login", font=HEADING_FONT).pack(pady=20)
+
+        frame = ctk.CTkFrame(self.login_window)
+        frame.pack(pady=10, padx=20, fill="x")
+
+        ctk.CTkLabel(frame, text="Username (Name):", font=BODY_FONT).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=200)
+        username_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        ctk.CTkLabel(frame, text="Password:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=200)
+        password_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        # Give focus to username entry initially
+        username_entry.focus()
+        # Bind Enter key to login action for password field for convenience
+        password_entry.bind("<Return>", lambda event: login_action())
+
+
+        error_label = ctk.CTkLabel(self.login_window, text="", text_color="red", font=BODY_FONT)
+        error_label.pack(pady=(0,5))
+
+        def login_action():
+            username = username_entry.get()
+            password = password_entry.get()
+            if auth_manager.login(username, password):
+                self.login_window.destroy()
+                self.login_window = None
+                self.initialize_main_app_ui() # Initialize and show the main app
+            else:
+                error_label.configure(text="Login failed. Invalid username or password.")
+                password_entry.delete(0, "end") # Clear password field
+                username_entry.focus() # Set focus back to username
+
+        button_frame = ctk.CTkFrame(self.login_window, fg_color="transparent")
+        button_frame.pack(pady=10)
+
+        login_button = ctk.CTkButton(button_frame, text="Login", font=BUTTON_FONT, command=login_action)
+        login_button.pack(side="left", padx=10)
+
+        quit_button = ctk.CTkButton(button_frame, text="Quit", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60")
+        quit_button.pack(side="left", padx=10)
+
+        # Center the login window
+        self.login_window.update_idletasks() # Update geometry
+        x = self.winfo_screenwidth() // 2 - self.login_window.winfo_width() // 2
+        y = self.winfo_screenheight() // 2 - self.login_window.winfo_height() // 2
+        self.login_window.geometry(f"+{x}+{y}")
+
+
+    def initialize_main_app_ui(self):
         # Main TabView
         self.tab_view = ctk.CTkTabview(self)
-        self.tab_view.pack(expand=True, fill="both", padx=15, pady=15) # Increased padding
+        self.tab_view.pack(expand=True, fill="both", padx=15, pady=15)
 
-        self.manage_books_tab = self.tab_view.add("📖 Manage Books") # Added Emojis
+        self.manage_books_tab = self.tab_view.add("📖 Manage Books")
         self.view_books_tab = self.tab_view.add("📚 View Books")
-        self.manage_students_tab = self.tab_view.add("🧑‍🎓 Manage Students")
+        self.manage_students_tab = self.tab_view.add("🧑‍🎓 Manage Students") # Original student management
         self.manage_loans_tab = self.tab_view.add("🔄 Manage Loans")
 
-        # Configure tabview appearance
-        # self.tab_view.configure(segmented_button_selected_color=COLOR_ACCENT)
-        # self.tab_view.configure(segmented_button_font=BUTTON_FONT)
-        # self.tab_view.configure(tab_text_color=COLOR_TEXT)
+        # Conditionally add User Management Tab
+        if auth_manager.is_admin():
+            self.manage_users_tab = self.tab_view.add("👤 User Management") # Advanced user management
+            if hasattr(self, 'setup_manage_users_tab'): # Ensure method exists
+                 self.setup_manage_users_tab()
+            else:
+                print("Error: setup_manage_users_tab method not found but was expected for admin.")
+        else:
+            # Ensure self.manage_users_tab is None or handled if it might exist from a previous session/state
+            self.manage_users_tab = None
 
 
-        # Populate Tabs
-        self.setup_manage_books_tab()
-        self.setup_view_books_tab()
-        self.setup_manage_students_tab()
-        self.setup_manage_loans_tab()
+        # Populate Tabs (ensure setup methods exist)
+        if hasattr(self, 'setup_manage_books_tab'): self.setup_manage_books_tab()
+        if hasattr(self, 'setup_view_books_tab'): self.setup_view_books_tab()
+        if hasattr(self, 'setup_manage_students_tab'): self.setup_manage_students_tab() # Original student management
+        if hasattr(self, 'setup_manage_loans_tab'): self.setup_manage_loans_tab()
+
+        # Deiconify (show) the main window now that UI is initialized
+        self.deiconify()
+
+    def quit_application(self):
+        # Perform any cleanup if necessary
+        if self.login_window is not None and self.login_window.winfo_exists():
+            self.login_window.destroy()
+        self.quit() # Properly exits the Tkinter mainloop
 
     def load_icon(self, icon_name, size=(20,20)):
         if icon_name in self.icon_cache:
@@ -654,10 +738,307 @@ class App(ctk.CTk):
             label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", text_color=text_color[0] if ctk.get_appearance_mode().lower() == "light" else text_color[1], font=ctk.CTkFont(weight=font_weight))
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
+    # --- USER MANAGEMENT TAB ---
+    def setup_manage_users_tab(self):
+        tab = self.manage_users_tab
+        tab.configure(fg_color=("#E9E9E9", "#3B3B3B")) # Neutral gray
 
+        # Main frame for the tab
+        main_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        main_frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        # --- Add User Section ---
+        add_user_outer_frame = ctk.CTkFrame(main_frame, corner_radius=10)
+        add_user_outer_frame.pack(pady=10, padx=10, fill="x")
+
+        ctk.CTkLabel(add_user_outer_frame, text="➕ Add New User / Edit User", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,15), padx=10)
+
+        ctk.CTkLabel(add_user_outer_frame, text="Name:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=8, sticky="w")
+        self.um_name_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, placeholder_text="Full Name")
+        self.um_name_entry.grid(row=1, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
+
+        ctk.CTkLabel(add_user_outer_frame, text="Password:", font=BODY_FONT).grid(row=2, column=0, padx=(10,5), pady=8, sticky="w")
+        self.um_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Enter password")
+        self.um_password_entry.grid(row=2, column=1, padx=(0,5), pady=8, sticky="ew")
+
+        ctk.CTkLabel(add_user_outer_frame, text="Confirm:", font=BODY_FONT).grid(row=3, column=0, padx=(10,5), pady=8, sticky="w")
+        self.um_confirm_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Confirm password")
+        self.um_confirm_password_entry.grid(row=3, column=1, padx=(0,5), pady=8, sticky="ew")
+
+        # Toggle password visibility (Optional - can be added later if desired)
+        # self.um_show_password_var = ctk.StringVar(value="off")
+        # show_password_check = ctk.CTkCheckBox(add_user_outer_frame, text="Show", variable=self.um_show_password_var, onvalue="on", offvalue="off", command=self.um_toggle_password_visibility, font=BODY_FONT)
+        # show_password_check.grid(row=2, column=2, rowspan=2, padx=(0,10), pady=8, sticky="w")
+
+
+        ctk.CTkLabel(add_user_outer_frame, text="Classroom:", font=BODY_FONT).grid(row=4, column=0, padx=(10,5), pady=8, sticky="w")
+        self.um_classroom_combo = ctk.CTkComboBox(add_user_outer_frame, values=["Class A", "Class B", "Class C", "Class D", "AdminOffice"], font=BODY_FONT, dropdown_font=BODY_FONT)
+        self.um_classroom_combo.grid(row=4, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
+        self.um_classroom_combo.set("Class A")
+
+        ctk.CTkLabel(add_user_outer_frame, text="Role:", font=BODY_FONT).grid(row=5, column=0, padx=(10,5), pady=8, sticky="w")
+        self.um_role_combo = ctk.CTkComboBox(add_user_outer_frame, values=["student", "leader", "admin"], font=BODY_FONT, dropdown_font=BODY_FONT)
+        self.um_role_combo.grid(row=5, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
+        self.um_role_combo.set("student")
+
+        add_user_outer_frame.columnconfigure(1, weight=1) # Make entry column expandable
+
+        self.um_add_user_button = ctk.CTkButton(add_user_outer_frame, text="Add User", font=BUTTON_FONT, command=self.add_user_ui, corner_radius=8)
+        self.um_add_user_button.grid(row=6, column=0, padx=(10,5), pady=15, sticky="ew")
+
+        self.um_update_user_button = ctk.CTkButton(add_user_outer_frame, text="Update Selected User", font=BUTTON_FONT, command=self.edit_user_ui, corner_radius=8, state="disabled")
+        self.um_update_user_button.grid(row=6, column=1, padx=(5,5), pady=15, sticky="ew")
+
+        self.um_clear_form_button = ctk.CTkButton(add_user_outer_frame, text="Clear Form", font=BUTTON_FONT, command=self.clear_user_form_ui, corner_radius=8, fg_color="gray50", hover_color="gray60")
+        self.um_clear_form_button.grid(row=6, column=2, padx=(5,10), pady=15, sticky="ew")
+
+
+        # --- User List Section ---
+        user_list_container = ctk.CTkFrame(main_frame, corner_radius=10)
+        user_list_container.pack(pady=10, padx=10, expand=True, fill="both")
+
+        list_header = ctk.CTkFrame(user_list_container, fg_color="transparent")
+        list_header.pack(fill="x", pady=(5,0))
+        ctk.CTkLabel(list_header, text="👥 Registered Users", font=HEADING_FONT).pack(side="left", padx=10, pady=5)
+        refresh_icon = self.load_icon("refresh")
+        refresh_button = ctk.CTkButton(list_header, text="Refresh List", image=refresh_icon, font=BUTTON_FONT, command=self.refresh_user_list_ui, width=120, corner_radius=8)
+        refresh_button.pack(side="right", padx=10, pady=5)
+
+        self.user_list_scroll_frame = ctk.CTkScrollableFrame(user_list_container, label_text="")
+        self.user_list_scroll_frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        # --- User Actions Section (for selected user) ---
+        actions_frame = ctk.CTkFrame(main_frame, corner_radius=10)
+        actions_frame.pack(pady=10, padx=10, fill="x")
+        ctk.CTkLabel(actions_frame, text="Actions for Selected User:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10)
+
+        delete_icon = self.load_icon("delete")
+        self.um_delete_button = ctk.CTkButton(actions_frame, text="Delete", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8)
+        self.um_delete_button.pack(side="left", padx=5, pady=10)
+
+        reset_pass_icon = self.load_icon("reset_password") # You'll need an icon like 'reset_password.png'
+        self.um_reset_password_button = ctk.CTkButton(actions_frame, text="Reset Password", image=reset_pass_icon, font=BUTTON_FONT, command=self.reset_user_password_ui, state="disabled", corner_radius=8)
+        self.um_reset_password_button.pack(side="left", padx=5, pady=10)
+
+        self.refresh_user_list_ui() # Initial population
+
+    def clear_user_form_ui(self, clear_selection=True):
+        self.um_name_entry.delete(0, "end")
+        self.um_password_entry.delete(0, "end")
+        self.um_confirm_password_entry.delete(0, "end")
+        self.um_classroom_combo.set("Class A") # Reset to default
+        self.um_role_combo.set("student")    # Reset to default
+        if clear_selection:
+            self.selected_user_id_manage_tab = None
+            self.um_delete_button.configure(state="disabled")
+            self.um_reset_password_button.configure(state="disabled")
+            self.um_update_user_button.configure(state="disabled", text="Update Selected User")
+            self.um_add_user_button.configure(state="normal")
+            self.um_name_entry.focus() # Set focus back to name entry
+
+    def select_user_for_management(self, user_id, user_data):
+        self.selected_user_id_manage_tab = user_id
+        self.um_delete_button.configure(state="normal")
+        self.um_reset_password_button.configure(state="normal")
+        self.um_update_user_button.configure(state="normal", text=f"Save Changes for {user_data.get('name', '')[:15]}")
+        self.um_add_user_button.configure(state="disabled") # Disable "Add User" when editing
+
+        # Populate form for editing
+        self.um_name_entry.delete(0, "end")
+        self.um_name_entry.insert(0, user_data.get('name', ''))
+        self.um_password_entry.delete(0, "end") # Clear password fields for editing
+        self.um_confirm_password_entry.delete(0, "end")
+        self.um_password_entry.configure(placeholder_text="Enter new password if changing")
+        self.um_confirm_password_entry.configure(placeholder_text="Confirm new password")
+        self.um_classroom_combo.set(user_data.get('classroom', 'Class A'))
+        self.um_role_combo.set(user_data.get('role', 'student'))
+
+        # Highlight the selected user in the list (visual feedback)
+        for widget in self.user_list_scroll_frame.winfo_children():
+            if hasattr(widget, "_user_id_ref") and widget._user_id_ref == user_id:
+                widget.configure(fg_color=("lightblue", "darkblue")) # Highlight color
+            else:
+                # Reset others to default alternating colors or a standard non-highlight color
+                # This depends on how you set initial colors. For simplicity, using a fixed one here.
+                original_color = widget._original_bg if hasattr(widget, "_original_bg") else ("gray85", "gray17") # Fallback
+                widget.configure(fg_color=original_color)
+
+
+    def refresh_user_list_ui(self):
+        if not hasattr(self, 'user_list_scroll_frame'): return
+        for widget in self.user_list_scroll_frame.winfo_children():
+            widget.destroy()
+
+        users = student_manager.get_students_db()
+        if not users:
+            ctk.CTkLabel(self.user_list_scroll_frame, text="No users found in the system.", font=BODY_FONT).pack(pady=20)
+            return
+
+        for i, user in enumerate(users):
+            user_id = user['id']
+            original_bg = ("gray85", "gray20") if i % 2 == 0 else ("gray90", "gray25")
+            item_frame = ctk.CTkFrame(self.user_list_scroll_frame, corner_radius=5, fg_color=original_bg)
+            item_frame.pack(fill="x", pady=(3,0), padx=5)
+            item_frame._user_id_ref = user_id # Store id for reference
+            item_frame._original_bg = original_bg # Store original color for de-selection
+
+            # User details
+            details_text = f"👤 {user['name']} ({user['role']}) - 🏫 {user['classroom']}"
+            # Small ID display: f"ID: {user_id[:8]}..."
+            id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray")
+            id_label.pack(side="right", padx=(0,10), pady=2)
+
+            label = ctk.CTkLabel(item_frame, text=details_text, font=BODY_FONT, anchor="w")
+            label.pack(side="left", padx=10, pady=8, fill="x", expand=True)
+
+            # Make the frame clickable
+            # Using lambda with default argument to capture current user_id and user data for the callback
+            item_frame.bind("<Button-1>", lambda event, uid=user_id, udata=user: self.select_user_for_management(uid, udata))
+            label.bind("<Button-1>", lambda event, uid=user_id, udata=user: self.select_user_for_management(uid, udata))
+            # id_label.bind("<Button-1>", lambda event, uid=user_id, udata=user: self.select_user_for_management(uid, udata))
+
+
+        # After refresh, ensure selection state is consistent
+        if not self.selected_user_id_manage_tab:
+            self.um_delete_button.configure(state="disabled")
+            self.um_reset_password_button.configure(state="disabled")
+            self.um_update_user_button.configure(state="disabled", text="Update Selected User")
+            self.um_add_user_button.configure(state="normal")
+        else:
+            # Re-highlight if selected user is still in the list
+            found_selected = False
+            for widget in self.user_list_scroll_frame.winfo_children():
+                 if hasattr(widget, "_user_id_ref") and widget._user_id_ref == self.selected_user_id_manage_tab:
+                    widget.configure(fg_color=("lightblue", "darkblue"))
+                    found_selected = True
+                    break
+            if not found_selected: # Selected user might have been deleted
+                self.clear_user_form_ui(clear_selection=True)
+
+
+    def add_user_ui(self):
+        name = self.um_name_entry.get()
+        password = self.um_password_entry.get()
+        confirm_password = self.um_confirm_password_entry.get()
+        classroom = self.um_classroom_combo.get()
+        role = self.um_role_combo.get()
+
+        if not name or not password or not confirm_password or not classroom or not role:
+            messagebox.showerror("Input Error", "All fields (Name, Password, Confirm Password, Classroom, Role) are required.")
+            return
+        if password != confirm_password:
+            messagebox.showerror("Password Mismatch", "Passwords do not match. Please re-enter.")
+            self.um_password_entry.delete(0, "end")
+            self.um_confirm_password_entry.delete(0, "end")
+            self.um_password_entry.focus()
+            return
+
+        # student_manager.add_student_db expects (name, classroom, password, role)
+        student_id = student_manager.add_student_db(name, classroom, password, role)
+        if student_id:
+            messagebox.showinfo("Success", f"User '{name}' added successfully with ID: {student_id}")
+            self.clear_user_form_ui(clear_selection=False) # Keep form clear but don't reset selection logic if any
+            self.refresh_user_list_ui()
+            # Also refresh other student lists if they exist (e.g., in Manage Students or Loans tab)
+            if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
+            if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo()
+        else:
+            messagebox.showerror("Database Error", f"Failed to add user '{name}'. Check console for details.")
+
+    def edit_user_ui(self):
+        """ Handles updating an existing user's details using student_manager.update_student_details_db. """
+        if not self.selected_user_id_manage_tab:
+            messagebox.showwarning("No User Selected", "Please select a user from the list to update.")
+            return
+
+        user_id = self.selected_user_id_manage_tab
+        new_name = self.um_name_entry.get()
+        new_classroom = self.um_classroom_combo.get()
+        new_role = self.um_role_combo.get()
+
+        if not new_name: # Basic validation
+            messagebox.showerror("Input Error", "Name field cannot be empty for an update.")
+            self.um_name_entry.focus()
+            return
+
+        # Classroom and Role are from ComboBox, so they'll always have a value.
+
+        success = student_manager.update_student_details_db(user_id, new_name, new_classroom, new_role)
+
+        if success:
+            messagebox.showinfo("Update Successful", f"User '{new_name}' (ID: {user_id[:8]}) details have been updated.")
+            self.clear_user_form_ui(clear_selection=True) # Resets form and selection state
+            self.refresh_user_list_ui() # Refresh the user list in the current tab
+
+            # Refresh other relevant UI parts if they exist
+            if hasattr(self, 'refresh_student_list_ui'): # For the "Manage Students" tab
+                self.refresh_student_list_ui()
+            if hasattr(self, 'refresh_leader_selector_combo'): # For the "Manage Loans" tab
+                self.refresh_leader_selector_combo()
+        else:
+            messagebox.showerror("Update Failed", f"Could not update details for user '{new_name}'. Please check the console for errors or ensure the user exists.")
+
+    def delete_user_ui(self):
+        if not self.selected_user_id_manage_tab:
+            messagebox.showwarning("No User Selected", "Please select a user from the list to delete.")
+            return
+
+        user_id = self.selected_user_id_manage_tab
+        # Fetch user details for confirmation message
+        user_details = student_manager.get_student_by_id_db(user_id)
+        user_name = user_details['name'] if user_details else "the selected user"
+
+        if not messagebox.askyesno("Confirm Deletion", f"Are you sure you want to permanently delete user '{user_name}' (ID: {user_id[:8]})?\nThis action cannot be undone."):
+            return
+
+        success = student_manager.delete_student_db(user_id)
+        if success:
+            messagebox.showinfo("Deletion Successful", f"User '{user_name}' has been deleted.")
+            self.clear_user_form_ui(clear_selection=True)
+            self.refresh_user_list_ui()
+            # Also refresh other student lists if they exist
+            if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
+            if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo()
+        else:
+            messagebox.showerror("Deletion Failed", f"Failed to delete user '{user_name}'. They might be involved in active loans or an error occurred.")
+
+    def reset_user_password_ui(self):
+        if not self.selected_user_id_manage_tab:
+            messagebox.showwarning("No User Selected", "Please select a user to reset their password.")
+            return
+
+        user_id = self.selected_user_id_manage_tab
+        user_details = student_manager.get_student_by_id_db(user_id)
+        user_name = user_details['name'] if user_details else "selected user"
+
+        new_password = simpledialog.askstring("New Password", f"Enter new password for {user_name}:", show='*')
+        if not new_password:
+            messagebox.showinfo("Cancelled", "Password reset cancelled.")
+            return
+
+        confirm_new_password = simpledialog.askstring("Confirm New Password", "Confirm the new password:", show='*')
+        if new_password != confirm_new_password:
+            messagebox.showerror("Password Mismatch", "New passwords do not match. Password not reset.")
+            return
+
+        success = student_manager.update_student_password_db(user_id, new_password)
+        if success:
+            messagebox.showinfo("Password Reset", f"Password for user '{user_name}' has been successfully reset.")
+        else:
+            messagebox.showerror("Password Reset Failed", f"Failed to reset password for '{user_name}'.")
+
+    # def um_toggle_password_visibility(self): # Optional helper
+    #     if self.um_show_password_var.get() == "on":
+    #         self.um_password_entry.configure(show="")
+    #         self.um_confirm_password_entry.configure(show="")
+    #     else:
+    #         self.um_password_entry.configure(show="*")
+    #         self.um_confirm_password_entry.configure(show="*")
+
+# Main execution
 if __name__ == "__main__":
-    ctk.set_appearance_mode("System")
-    ctk.set_default_color_theme("blue")
+    # It's good practice to ensure DB is ready before app starts fully.
+    # init_db() # This is already called in App.__init__
 
     app = App()
     app.mainloop()
