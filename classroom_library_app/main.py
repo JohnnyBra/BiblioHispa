@@ -600,7 +600,7 @@ class App(ctk.CTk):
                 self.current_leader_classroom = None
         else:
             self.current_leader_id = None
-                self.current_leader_classroom = None # Used as ubicacion for books
+            self.current_leader_classroom = None # Used as ubicacion for books
 
         self.refresh_loan_related_combos_and_lists()
 
