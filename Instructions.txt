@@ -1,0 +1,87 @@
+# Classroom Library Manager - Instructions
+
+## 1. About the Application
+
+Welcome to the Classroom Library Manager! This application helps teachers and student leaders manage a classroom library, track books, students, and loans.
+
+## 2. Features
+
+*   **Book Management:**
+    *   Add new books with details like title, author, ISBN, and classroom.
+    *   Import books in bulk from a CSV file.
+    *   View a list of all books with filtering by classroom and status (Available/Borrowed).
+    *   Search for books by title or author.
+*   **Student Management:**
+    *   Add new students with their name, classroom, and role (student/leader).
+    *   View a list of all registered students.
+*   **Loan Management (requires a Student Leader):**
+    *   Select an acting Student Leader to manage loans for their classroom.
+    *   Lend available books from the leader's classroom to students in the same classroom.
+    *   Set due dates for loaned books.
+    *   Return borrowed books.
+    *   View all current loans within the leader's classroom.
+    *   View reminders for books that are due soon (within 7 days) or overdue in the leader's classroom. Overdue books are highlighted.
+*   **User-Friendly Interface:**
+    *   A tabbed interface for easy navigation between managing books, students, and loans.
+    *   Child-friendly visual styling with clear fonts and intuitive controls.
+    *   Helpful icons and emojis to guide users.
+
+## 3. Running the Application
+
+*   **If you have the executable (`ClassroomLibraryManager`):**
+    1.  Simply double-click the `ClassroomLibraryManager` executable file to run it.
+    2.  The application window will open. No separate installation is usually required.
+    3.  The application will create a `database` folder (containing `library.db`) and an `assets` folder (for icons, if any are used beyond placeholders) in the same directory as the executable if they don't already exist.
+
+*   **If running from Python source code:**
+    1.  **Prerequisites:**
+        *   Ensure you have Python 3 installed (version 3.7 or newer recommended).
+        *   Install required packages using pip:
+            ```bash
+            pip install customtkinter Pillow
+            ```
+    2.  **Directory Structure:**
+        *   Make sure you have the entire `classroom_library_app` folder, which includes:
+            *   `main.py` (the main script)
+            *   `book_manager.py`
+            *   `student_manager.py`
+            *   `utils.py`
+            *   `database/db_setup.py`
+            *   `assets/` (can be initially empty; `assets/icons/` will be created if needed for placeholders)
+            *   `assets/sample_books.csv` (for testing import)
+    3.  **Running the App:**
+        *   Navigate your terminal or command prompt to the directory *containing* the `classroom_library_app` folder (i.e., the project root).
+        *   Run the application using:
+            ```bash
+            python classroom_library_app/main.py
+            ```
+        *   Alternatively, navigate into the `classroom_library_app` folder and run:
+            ```bash
+            python main.py
+            ```
+        *   The application will create `database/library.db` within the `classroom_library_app` folder if it doesn't exist.
+
+## 4. Using the Application
+
+1.  **Manage Books Tab:**
+    *   **Add New Book:** Fill in the form and click "Add Book to Library". Title, Author, and Classroom are required.
+    *   **Import Books from CSV:** Click "Select CSV File", choose a CSV file with headers: `Title,Author,Classroom,ISBN,CoverImage`. An example `sample_books.csv` is provided in the `assets` folder.
+2.  **View Books Tab:**
+    *   Browse the list of all books.
+    *   Use the dropdowns to filter by Classroom or Status.
+    *   Use the search bar to find books by title or author.
+3.  **Manage Students Tab:**
+    *   **Add New Student:** Fill in the form (Name, Classroom, Role) and click "Add Student".
+    *   View the list of registered students. Click "Refresh" if needed.
+4.  **Manage Loans Tab:**
+    *   **Select Leader:** First, select a "Student Leader" from the dropdown. Loan operations are managed for this leader's classroom.
+    *   **Lend Book:** Choose an available book and a borrower from the respective dropdowns (lists are filtered to the leader's classroom). Enter a due date (YYYY-MM-DD) and click "Lend Book".
+    *   **Return Book:** Choose a borrowed book from the dropdown and click "Return Book".
+    *   **View Loans:** The "Current Loans" sub-tab shows all books currently borrowed in the leader's classroom. The "Reminders" sub-tab shows books due soon or overdue.
+
+## 5. Notes
+
+*   The database (`library.db`) is stored locally. If you move the executable or source code, ensure the `database` folder (and `library.db` within it) is moved accordingly if you want to retain existing data. For bundled executables, it's typically alongside the executable.
+*   Icons are placeholders if actual image files are not found in `assets/icons/`.
+
+Have fun managing your classroom library! 📖✨
