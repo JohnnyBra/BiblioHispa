@@ -69,11 +69,12 @@ def init_db():
         conn.commit()
         print("Database schema initialized successfully. Books and Students tables are ready.")
 
-        # Check for and create default admin user if none exists
-        cursor.execute("SELECT COUNT(*) FROM students WHERE role = 'admin'")
-        admin_count = cursor.fetchone()[0]
+        # Check for and create the specific default admin user if it doesn't exist
+        cursor.execute("SELECT id FROM students WHERE name = ? AND role = ?", ("admin", "admin"))
+        existing_default_admin = cursor.fetchone()
 
-        if admin_count == 0:
+        if existing_default_admin is None:
+            # Default admin user "admin" not found, proceed to create it
             admin_id = str(uuid.uuid4())
             admin_name = "admin"
             admin_password = "adminpass" # Default password
@@ -87,16 +88,14 @@ def init_db():
                     VALUES (?, ?, ?, 'admin', ?, ?)
                 """, (admin_id, admin_name, admin_classroom, hashed_password_hex, salt_hex))
                 conn.commit()
-                print(f"\nDefault admin user created.")
+                print(f"\nDefault admin user '{admin_name}' created.") # Added admin_name for clarity
                 print(f"  Username: {admin_name}")
                 print(f"  Password: {admin_password}")
                 print("IMPORTANT: Change this default admin password immediately after first login via User Management tab.")
             except sqlite3.Error as e:
-                print(f"Error creating default admin user: {e}")
-                # Optionally rollback if the insert fails, though commit for tables already happened.
-                # conn.rollback()
+                print(f"Error creating default admin user '{admin_name}': {e}") # Added admin_name
         else:
-            print("Admin user(s) already exist. Skipping default admin creation.")
+            print(f"Default admin user 'admin' already exists. Skipping default admin creation.")
 
     except sqlite3.Error as e:
         print(f"Database error during init_db: {e}")
