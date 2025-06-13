@@ -86,6 +86,37 @@ def init_db():
         conn.commit()
         print("Database schema initialized successfully. Books and Students tables are ready.")
 
+        # Add gamification columns with error handling for existing columns
+        try:
+            cursor.execute("ALTER TABLE students ADD COLUMN points INTEGER DEFAULT 0;")
+            conn.commit()
+            print("Column 'points' added to 'students' table.")
+        except sqlite3.OperationalError as e:
+            if 'duplicate column name' in str(e).lower():
+                print(f"Column 'points' already exists in 'students'. Skipping.")
+            else:
+                raise
+
+        try:
+            cursor.execute("ALTER TABLE loans ADD COLUMN worksheet_submitted INTEGER DEFAULT 0;")
+            conn.commit()
+            print("Column 'worksheet_submitted' added to 'loans' table.")
+        except sqlite3.OperationalError as e:
+            if 'duplicate column name' in str(e).lower():
+                print(f"Column 'worksheet_submitted' already exists in 'loans'. Skipping.")
+            else:
+                raise
+
+        try:
+            cursor.execute("ALTER TABLE loans ADD COLUMN early_return_bonus_applied INTEGER DEFAULT 0;")
+            conn.commit()
+            print("Column 'early_return_bonus_applied' added to 'loans' table.")
+        except sqlite3.OperationalError as e:
+            if 'duplicate column name' in str(e).lower():
+                print(f"Column 'early_return_bonus_applied' already exists in 'loans'. Skipping.")
+            else:
+                raise
+
         # Check for and create the specific default admin user if it doesn't exist
         cursor.execute("SELECT id FROM students WHERE name = ? AND role = ?", ("admin", "admin"))
         existing_default_admin = cursor.fetchone()

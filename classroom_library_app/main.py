@@ -134,6 +134,9 @@ class App(ctk.CTk):
         if hasattr(self, 'setup_manage_students_tab'): self.setup_manage_students_tab() # Original student management
         if hasattr(self, 'setup_manage_loans_tab'): self.setup_manage_loans_tab()
 
+        self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
+        self.setup_leaderboard_tab() # Call the new method
+
         # Deiconify (show) the main window now that UI is initialized
         self.deiconify()
 
@@ -477,7 +480,7 @@ class App(ctk.CTk):
         for i, student in enumerate(students):
             student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             student_item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Nombre: {student['name']} ({student['role']})\nClase: {student['classroom']} | ID: {student['id']}" # Translated
+            details = f"Nombre: {student['name']} ({student['role']}) - Puntos: {student.get('points', 0)}\nClase: {student['classroom']} | ID: {student['id']}" # Translated & Points Added
             label = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w")
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
@@ -518,14 +521,14 @@ class App(ctk.CTk):
         self.borrower_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
         self.borrower_combo.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
 
-        ctk.CTkLabel(lend_frame, text="Fecha de Devolución:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w") # Translated "Due Date"
-        self.due_date_entry = ctk.CTkEntry(lend_frame, placeholder_text=(datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d'), width=280, font=BODY_FONT)
-        self.due_date_entry.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
+        # ctk.CTkLabel(lend_frame, text="Fecha de Devolución:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w") # Translated "Due Date"
+        # self.due_date_entry = ctk.CTkEntry(lend_frame, placeholder_text=(datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d'), width=280, font=BODY_FONT)
+        # self.due_date_entry.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
         lend_frame.columnconfigure(1, weight=1)
 
         lend_icon = self.load_icon("lend_book")
         lend_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
-        lend_button.grid(row=4, column=0, columnspan=2, pady=15, sticky="ew")
+        lend_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Adjusted row from 4 to 3
 
         # --- Return Book Section ---
         return_frame = ctk.CTkFrame(left_frame, corner_radius=8)
@@ -533,13 +536,21 @@ class App(ctk.CTk):
         ctk.CTkLabel(return_frame, text="⬅️ Devolver un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # Translated
 
         ctk.CTkLabel(return_frame, text="Libro Prestado:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated "Book:" to "Libro Prestado:" for clarity
-        self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
+        self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_return_book_selection_change)
         self.return_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
         return_frame.columnconfigure(1, weight=1)
 
+        self.worksheet_submitted_checkbox = ctk.CTkCheckBox(return_frame, text="Hoja de trabajo entregada", font=BODY_FONT)
+        self.worksheet_submitted_checkbox.configure(state="disabled")
+        self.worksheet_submitted_checkbox.grid(row=2, column=0, columnspan=2, padx=5, pady=(5,5), sticky="w")
+
         return_icon = self.load_icon("return_book")
         return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Translated
-        return_button.grid(row=2, column=0, columnspan=2, pady=15, sticky="ew")
+        return_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Shifted to row 3
+
+        extend_loan_icon = self.load_icon("extend_loan")
+        self.extend_loan_button = ctk.CTkButton(return_frame, text="Extender Préstamo", image=extend_loan_icon, font=BUTTON_FONT, state="disabled", corner_radius=8, command=self.extend_loan_ui)
+        self.extend_loan_button.grid(row=4, column=0, columnspan=2, pady=(5,15), sticky="ew") # Shifted to row 4
 
         right_frame = ctk.CTkFrame(main_loan_content_frame, fg_color="transparent")
         right_frame.pack(side="left", expand=True, fill="both", padx=(10,0), pady=0)
@@ -600,7 +611,7 @@ class App(ctk.CTk):
                 self.current_leader_classroom = None
         else:
             self.current_leader_id = None
-                self.current_leader_classroom = None # Used as ubicacion for books
+            self.current_leader_classroom = None # Used as ubicacion for books
 
         self.refresh_loan_related_combos_and_lists()
 
@@ -626,7 +637,7 @@ class App(ctk.CTk):
 
         # Populate Lend Book ComboBox
         # Books from the selected leader's ubicacion
-        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=self.current_leader_classroom)
+        all_books_in_ubicacion = book_manager.get_all_books_db(ubicacion_filter=None)
 
         lend_book_display_names = []
         self.lend_book_map = {}
@@ -649,17 +660,27 @@ class App(ctk.CTk):
 
         # Populate Return Book ComboBox
         # Using current_leader_classroom as the ubicacion_filter for get_current_loans_db
-        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
+        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=None)
         self.return_book_map = {}
         return_book_display_names = []
         for loan in active_loans_in_ubicacion:
             # loan dict now contains 'titulo', 'borrower_name', 'due_date', 'loan_id'
-            display_text = f"{loan.get('titulo', 'N/A')} (Borrower: {loan.get('borrower_name', 'N/A')}) Due: {loan.get('due_date', 'N/A')}"
+            due_date_str = loan.get('due_date', 'N/A')
+            due_date_display = 'N/A'
+            if due_date_str != 'N/A':
+                try:
+                    due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
+                    due_date_display = due_date_dt.strftime('%d-%m-%Y')
+                except ValueError:
+                    due_date_display = due_date_str # Fallback if parsing fails
+
+            display_text = f"{loan.get('titulo', 'N/A')} (Prestatario: {loan.get('borrower_name', 'N/A')}) Vence: {due_date_display}"
             self.return_book_map[display_text] = loan['loan_id'] # Map display text to loan_id
             return_book_display_names.append(display_text)
 
         self.return_book_combo.configure(values=return_book_display_names if return_book_display_names else ["No borrowed books"])
         self.return_book_combo.set(return_book_display_names[0] if return_book_display_names else "No borrowed books")
+        self.on_return_book_selection_change(self.return_book_combo.get()) # Set initial state for extend_loan_button
 
         self.refresh_current_loans_list()
         self.refresh_reminders_list()
@@ -671,22 +692,22 @@ class App(ctk.CTk):
 
         book_display_name = self.lend_book_combo.get()
         borrower_display_name = self.borrower_combo.get()
-        due_date_str = self.due_date_entry.get()
+        # due_date_str = self.due_date_entry.get() # Removed
 
         if book_display_name == "No available books" or borrower_display_name == "No students in class":
             messagebox.showerror("Input Error", "Please select a valid book and borrower.")
             return
 
-        if not due_date_str:
-            messagebox.showerror("Input Error", "Due date is required.")
-            return
-        try:
-            # Validate due_date_str format, but allow it to be in the past for flexibility if needed,
-            # though typically it should be in the future.
-            datetime.strptime(due_date_str, '%Y-%m-%d')
-        except ValueError:
-            messagebox.showerror("Input Error", "Invalid date format for Due Date. Use YYYY-MM-DD.")
-            return
+        # if not due_date_str: # Removed
+        #     messagebox.showerror("Input Error", "Due date is required.")
+        #     return
+        # try: # Removed
+        #     # Validate due_date_str format, but allow it to be in the past for flexibility if needed,
+        #     # though typically it should be in the future.
+        #     datetime.strptime(due_date_str, '%Y-%m-%d')
+        # except ValueError: # Removed
+        #     messagebox.showerror("Input Error", "Invalid date format for Due Date. Use YYYY-MM-DD.")
+        #     return
 
         book_id = self.lend_book_map.get(book_display_name)
         borrower_id = self.borrower_student_map.get(borrower_display_name)
@@ -695,12 +716,16 @@ class App(ctk.CTk):
             messagebox.showerror("Internal Error", "Could not resolve book or borrower ID from selection.")
             return
 
+        # Calculate due date: 2 weeks from now
+        due_date_calculated = datetime.now() + timedelta(days=14)
+        due_date_str_for_db = due_date_calculated.strftime('%Y-%m-%d')
+
         # Call the updated book_manager.loan_book_db
-        success = book_manager.loan_book_db(book_id, borrower_id, due_date_str, self.current_leader_id)
+        success = book_manager.loan_book_db(book_id, borrower_id, due_date_str_for_db, self.current_leader_id)
 
         if success:
             messagebox.showinfo("Success", f"Book '{book_display_name.split(' (by ')[0]}' loaned to {borrower_display_name}.")
-            self.due_date_entry.delete(0, 'end') # Clear entry for next use
+            # self.due_date_entry.delete(0, 'end') # Clear entry for next use - Removed
             self.refresh_loan_related_combos_and_lists()
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
         else:
@@ -721,15 +746,50 @@ class App(ctk.CTk):
             messagebox.showerror("Internal Error", "Could not resolve loan ID for return from selection.")
             return
 
+        is_worksheet_submitted = bool(self.worksheet_submitted_checkbox.get())
+
         # Call the updated book_manager.return_book_db with loan_id
-        success = book_manager.return_book_db(loan_id, self.current_leader_id)
+        success = book_manager.return_book_db(loan_id, self.current_leader_id, worksheet_submitted=is_worksheet_submitted)
 
         if success:
             messagebox.showinfo("Success", f"Loan returned successfully.")
             self.refresh_loan_related_combos_and_lists()
             if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
+            self.worksheet_submitted_checkbox.deselect()
+            # Ensure the checkbox state is updated based on new combo selection
+            self.on_return_book_selection_change(self.return_book_combo.get())
         else:
             messagebox.showerror("Return Failed", "Failed to return book. Check console (loan ID might be invalid or other DB error).")
+
+    def on_return_book_selection_change(self, selection=None): # 'selection' arg is passed by CTkComboBox command
+        # selection is the display text from the combobox
+        loan_id = self.return_book_map.get(selection)
+        if loan_id:
+            self.extend_loan_button.configure(state="normal")
+            self.worksheet_submitted_checkbox.configure(state="normal")
+        else:
+            self.extend_loan_button.configure(state="disabled")
+            self.worksheet_submitted_checkbox.configure(state="disabled")
+            self.worksheet_submitted_checkbox.deselect()
+
+    def extend_loan_ui(self):
+        selected_loan_display_text = self.return_book_combo.get()
+        loan_id = self.return_book_map.get(selected_loan_display_text)
+
+        if not loan_id: # This also handles cases where selected_loan_display_text might be a placeholder like "No hay libros prestados" if that key isn't in the map
+            messagebox.showerror("Error", "Por favor, seleccione un préstamo válido para extender.")
+            return
+
+        # Assuming book_manager.extend_loan_db(loan_id) will be created and will return True on success, False on failure.
+        # We'll default days_to_extend to 14 in the db function.
+        success = book_manager.extend_loan_db(loan_id)
+
+        if success:
+            messagebox.showinfo("Éxito", "Préstamo extendido con éxito por 14 días.")
+            self.refresh_loan_related_combos_and_lists()
+            # Consider if self.refresh_book_list_ui() is needed if due dates are shown there or affect availability. For now, focus on loan list.
+        else:
+            messagebox.showerror("Error", "No se pudo extender el préstamo. Verifique la consola para más detalles.")
 
     def refresh_current_loans_list(self):
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
@@ -739,7 +799,7 @@ class App(ctk.CTk):
              return
 
         # Use current_leader_classroom as ubicacion_filter
-        loans = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
+        loans = book_manager.get_current_loans_db(ubicacion_filter=None)
         if not loans:
             ctk.CTkLabel(self.current_loans_frame, text=f"No books currently loaned out in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
@@ -747,9 +807,30 @@ class App(ctk.CTk):
         for i, loan in enumerate(loans): # loan is now a dict from get_current_loans_db
             item_frame = ctk.CTkFrame(self.current_loans_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Book: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
-                      f"Borrower: {loan.get('borrower_name', 'Unknown Student')}\n" \
-                      f"Loaned: {loan.get('loan_date', 'N/A')} | Due: {loan.get('due_date', 'N/A')} (ID: {loan.get('loan_id', '')[:8]}...)"
+
+            loan_date_str = loan.get('loan_date', 'N/A')
+            loan_date_display = 'N/A'
+            if loan_date_str != 'N/A':
+                try:
+                    loan_date_dt = datetime.strptime(loan_date_str, '%Y-%m-%d')
+                    loan_date_display = loan_date_dt.strftime('%d-%m-%Y')
+                except ValueError:
+                    loan_date_display = loan_date_str # Fallback
+
+            due_date_str = loan.get('due_date', 'N/A')
+            due_date_display = 'N/A'
+            if due_date_str != 'N/A':
+                try:
+                    due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
+                    due_date_display = due_date_dt.strftime('%d-%m-%Y')
+                except ValueError:
+                    due_date_display = due_date_str # Fallback
+
+            borrower_name = loan.get('borrower_name', 'Estudiante Desconocido')
+
+            details = f"Libro: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
+                      f"Prestatario: {borrower_name}\n" \
+                      f"Prestado: {loan_date_display} | Vence: {due_date_display} (ID: {loan.get('loan_id', '')[:8]}...)"
             label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w")
             label.pack(pady=5, padx=10, fill="x", expand=True)
 
@@ -761,27 +842,37 @@ class App(ctk.CTk):
             return
 
         # Use current_leader_classroom as ubicacion_filter
-        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=self.current_leader_classroom)
+        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=None)
         if not due_soon_loans:
             ctk.CTkLabel(self.reminders_frame, text=f"No books due soon or overdue in {self.current_leader_classroom}.").pack(pady=20, padx=10)
             return
 
         today = datetime.now().date()
-        for i, book in enumerate(due_soon_books):
+        for i, book in enumerate(due_soon_loans): # Corrected variable name here
             item_frame = ctk.CTkFrame(self.reminders_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
             item_frame.pack(fill="x", pady=(2,0), padx=5)
 
-            due_date = datetime.strptime(book['due_date'], '%Y-%m-%d').date()
-            is_overdue = due_date < today
+            due_date_str = book['due_date']
+            due_date_display = 'N/A'
+            is_overdue = False # Default
+            if due_date_str != 'N/A':
+                try:
+                    due_date_dt_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
+                    due_date_display = due_date_dt_obj.strftime('%d-%m-%Y')
+                    is_overdue = due_date_dt_obj.date() < today
+                except ValueError:
+                    due_date_display = due_date_str # Fallback
 
-            details = f"Book: {book['title']}\n" \
-                      f"Borrower: {book.get('borrower_name', 'Unknown')}\n" \
-                      f"Due Date: {book['due_date']}"
+            borrower_name = book.get('borrower_name', 'Desconocido')
+
+            details = f"Libro: {book['titulo']}\n" \
+                      f"Prestatario: {borrower_name}\n" \
+                      f"Fecha Vencimiento: {due_date_display}"
 
             text_color = ("#D03030", "#E04040") if is_overdue else (None, None) # CustomTkinter default if None
             font_weight = "bold" if is_overdue else "normal"
 
-            if is_overdue: details += " (OVERDUE)"
+            if is_overdue: details += " (VENCIDO)"
 
             label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", text_color=text_color[0] if ctk.get_appearance_mode().lower() == "light" else text_color[1], font=ctk.CTkFont(weight=font_weight))
             label.pack(pady=5, padx=10, fill="x", expand=True)
@@ -929,7 +1020,13 @@ class App(ctk.CTk):
             item_frame._original_bg = original_bg # Store original color for de-selection
 
             # User details
-            details_text = f"👤 {user['name']} ({user['role']}) - 🏫 {user['classroom']}" # Keep classroom as it's from DB, role might need translation if roles are translated in DB/logic
+            role_display_map = {
+                "student": "alumno",
+                "leader": "líder",
+                "admin": "admin"
+            }
+            display_role = role_display_map.get(user['role'], user['role']) # Fallback to original if no map found
+            details_text = f"👤 {user['name']} ({display_role}) - Puntos: {user.get('points', 0)} - 🏫 {user['classroom']}" # Points Added
             # Small ID display: f"ID: {user_id[:8]}..."
             id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray") # "ID" is common
             id_label.pack(side="right", padx=(0,10), pady=2)
@@ -967,9 +1064,9 @@ class App(ctk.CTk):
         password = self.um_password_entry.get()
         confirm_password = self.um_confirm_password_entry.get()
         classroom = self.um_classroom_combo.get()
-        role = self.um_role_combo.get()
+        role_spanish = self.um_role_combo.get()
 
-        if not name or not password or not confirm_password or not classroom or not role:
+        if not name or not password or not confirm_password or not classroom or not role_spanish:
             messagebox.showerror("Error de Entrada", "Todos los campos (Nombre, Contraseña, Confirmar Contraseña, Clase/Oficina, Rol) son requeridos.") # Translated
             return
         if password != confirm_password:
@@ -979,9 +1076,16 @@ class App(ctk.CTk):
             self.um_password_entry.focus()
             return
 
-        student_id = student_manager.add_student_db(name, classroom, password, role)
+        role_map = {
+            "alumno": "student",
+            "líder": "leader",
+            "admin": "admin"
+        }
+        role_english = role_map.get(role_spanish.lower(), "student") # Default to student
+
+        student_id = student_manager.add_student_db(name, classroom, password, role_english)
         if student_id:
-            messagebox.showinfo("Éxito", f"Usuario '{name}' añadido con éxito. ID: {student_id}") # Translated
+            messagebox.showinfo("Éxito", f"Usuario '{name}' ({role_english}) añadido con éxito. ID: {student_id}") # Translated
             self.clear_user_form_ui(clear_selection=False)
             self.refresh_user_list_ui()
             if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui()
@@ -1063,6 +1167,135 @@ class App(ctk.CTk):
             messagebox.showinfo("Contraseña Restablecida", f"La contraseña para el usuario '{user_name}' ha sido restablecida con éxito.") # Translated
         else:
             messagebox.showerror("Error al Restablecer Contraseña", f"Error al restablecer la contraseña para '{user_name}'.") # Translated
+
+    def setup_leaderboard_tab(self):
+       tab = self.leaderboard_tab # Use the instance variable for the tab
+       tab.configure(fg_color=("#E0F7FA", "#2C3E50")) # Example color, adjust as needed
+
+       # --- Controls Frame ---
+       controls_frame = ctk.CTkFrame(tab, corner_radius=10)
+       controls_frame.pack(pady=10, padx=10, fill="x")
+
+       ctk.CTkLabel(controls_frame, text="Ver:", font=BODY_FONT).pack(side="left", padx=(10,5), pady=10)
+
+       self.leaderboard_filter_type_combo = ctk.CTkSegmentedButton(controls_frame,
+                                                                  values=["🏆 Global", "🏫 Por Clase"],
+                                                                  font=BUTTON_FONT,
+                                                                  # command will be added later
+                                                                  )
+       self.leaderboard_filter_type_combo.pack(side="left", padx=5, pady=10)
+       self.leaderboard_filter_type_combo.set("🏆 Global") # Default selection
+
+       self.leaderboard_class_filter_combo = ctk.CTkComboBox(controls_frame,
+                                                               values=[], # To be populated later
+                                                               font=BODY_FONT,
+                                                               dropdown_font=BODY_FONT,
+                                                               state="disabled", # Enabled when "Por Clase" is selected
+                                                               # command will be added later
+                                                               )
+       self.leaderboard_class_filter_combo.pack(side="left", padx=5, pady=10)
+
+       refresh_icon = self.load_icon("refresh") # Assumes you have a refresh icon
+       self.leaderboard_refresh_button = ctk.CTkButton(controls_frame, text="Refrescar",
+                                                      image=refresh_icon, font=BUTTON_FONT,
+                                                      # command will be added later
+                                                      width=100, corner_radius=8)
+       self.leaderboard_refresh_button.pack(side="right", padx=10, pady=10)
+
+       # --- Leaderboard Display Area ---
+       self.leaderboard_scroll_frame = ctk.CTkScrollableFrame(tab, label_text="Tabla de Clasificación",
+                                                              label_font=HEADING_FONT, corner_radius=10)
+       self.leaderboard_scroll_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
+
+       # Configure commands for filters
+       self.leaderboard_filter_type_combo.configure(command=self.on_leaderboard_filter_type_change)
+       self.leaderboard_class_filter_combo.configure(command=self.refresh_leaderboard_display) # Refresh on class change
+       self.leaderboard_refresh_button.configure(command=self.refresh_leaderboard_display)
+
+       # Initial population and setup of class filter
+       self.on_leaderboard_filter_type_change(self.leaderboard_filter_type_combo.get())
+
+    def on_leaderboard_filter_type_change(self, selection=None): # selection is passed from segmented button
+        if selection == "🏫 Por Clase":
+            classrooms = student_manager.get_distinct_classrooms()
+            if not classrooms: # Handle case with no classrooms
+                classrooms = ["No hay clases"] # Placeholder
+                self.leaderboard_class_filter_combo.configure(state="disabled", values=classrooms)
+                self.leaderboard_class_filter_combo.set(classrooms[0])
+            else:
+                self.leaderboard_class_filter_combo.configure(state="normal", values=classrooms)
+                self.leaderboard_class_filter_combo.set(classrooms[0]) # Select first class by default
+        else: # "🏆 Global"
+            self.leaderboard_class_filter_combo.configure(state="disabled", values=[])
+            self.leaderboard_class_filter_combo.set("") # Clear selection or set to a placeholder
+
+        self.refresh_leaderboard_display()
+
+    def refresh_leaderboard_display(self):
+        # Clear existing leaderboard entries
+        for widget in self.leaderboard_scroll_frame.winfo_children():
+            widget.destroy()
+
+        filter_type = self.leaderboard_filter_type_combo.get()
+        classroom_to_filter = None
+
+        if filter_type == "🏫 Por Clase":
+            classroom_to_filter = self.leaderboard_class_filter_combo.get()
+            # Assuming "Todas las Clases" might be a placeholder if class combo is populated with it.
+            if not classroom_to_filter or classroom_to_filter == "Todas las Clases":
+                # If no specific class or "All Classes" is selected in "Por Clase" mode,
+                # effectively treat as global or show specific message.
+                # For this implementation, if "Todas las Clases" is selected, it means no specific class filter.
+                # However, student_manager.get_students_sorted_by_points expects None for global.
+                # We'll rely on the segmented button's "Global" value to pass None.
+                # If "Por Clase" is selected but the class combo has a "All Classes" type of value,
+                # this might mean we should show all, or prompt user, or disable this state.
+                # For now, if classroom_to_filter is "Todas las Clases", we set it to None
+                # to fetch all students, which might be confusing if "Por Clase" is selected.
+                # This logic might need refinement based on how class_filter_combo is populated.
+                if classroom_to_filter == "Todas las Clases": #This placeholder needs to be consistent if used
+                    classroom_to_filter = None
+                # If classroom_to_filter is empty (e.g. not set), it might also mean fetch all or do nothing.
+                # For now, if it's empty, it will pass None to the backend.
+
+        students_data = student_manager.get_students_sorted_by_points(classroom_filter=classroom_to_filter)
+
+        if not students_data:
+            no_data_label = ctk.CTkLabel(self.leaderboard_scroll_frame, text="No hay datos para mostrar.", font=BODY_FONT)
+            no_data_label.pack(pady=20)
+            return
+
+        entry_icon = self.load_icon("leaderboard_entry") # Generic icon for entries
+
+        for i, student in enumerate(students_data):
+            rank = i + 1
+
+            item_frame = ctk.CTkFrame(self.leaderboard_scroll_frame, corner_radius=6, border_width=1, border_color=("gray80", "gray30"))
+            item_frame.pack(fill="x", pady=(5,0), padx=5)
+
+            rank_label = ctk.CTkLabel(item_frame, text=f"#{rank}", font=(APP_FONT_FAMILY, 16, "bold"))
+            rank_label.pack(side="left", padx=10, pady=10)
+
+            if entry_icon: # Add small icon if loaded
+                icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="")
+                icon_label.pack(side="left", padx=(0,10), pady=10)
+
+            details_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+            details_frame.pack(side="left", padx=10, pady=5, expand=True, fill="x")
+
+            name_text = student.get('name', 'N/A')
+            points_text = student.get('points', 0)
+            classroom_text = student.get('classroom', 'N/A')
+
+            name_label = ctk.CTkLabel(details_frame, text=name_text, font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
+            name_label.pack(fill="x")
+
+            points_label_text = f"{points_text} Puntos"
+            if filter_type == "🏆 Global": # Only show classroom in global view
+                points_label_text += f"  |  Clase: {classroom_text}"
+
+            points_label = ctk.CTkLabel(details_frame, text=points_label_text, font=(APP_FONT_FAMILY, 11), anchor="w")
+            points_label.pack(fill="x")
 
     # def um_toggle_password_visibility(self): # Optional helper
     #     if self.um_show_password_var.get() == "on":
