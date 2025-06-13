@@ -7,6 +7,7 @@ import student_manager
 import auth_manager # Added for user management context
 from tkinter import simpledialog # Added for password dialogs
 from datetime import datetime, timedelta
+import os # <--- ADD THIS LINE
 from utils import get_data_path # Import the helper
 
 # --- Global Styling & Theme ---
