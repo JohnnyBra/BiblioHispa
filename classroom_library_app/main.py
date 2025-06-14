@@ -212,9 +212,22 @@ class App(ctk.CTk):
         self.genero_entry.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
 
         ctk.CTkLabel(add_book_frame, text="Ubicación:", font=BODY_FONT).grid(row=4, column=0, padx=10, pady=8, sticky="w")
-        self.ubicacion_combobox = ctk.CTkComboBox(add_book_frame, values=["Salón A", "Salón B", "Salón C", "Biblioteca"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Values may need translation later
+
+        dynamic_classrooms = student_manager.get_distinct_classrooms()
+        fixed_locations = ["Biblioteca"]
+        all_ubicaciones = sorted(list(set(dynamic_classrooms + fixed_locations)))
+        display_values_setup = all_ubicaciones if all_ubicaciones else ["N/A"]
+
+        self.ubicacion_combobox = ctk.CTkComboBox(add_book_frame,
+                                                  values=display_values_setup,
+                                                  width=300,
+                                                  font=BODY_FONT,
+                                                  dropdown_font=BODY_FONT)
         self.ubicacion_combobox.grid(row=4, column=1, padx=10, pady=8, sticky="ew")
-        self.ubicacion_combobox.set("Salón A")
+        if all_ubicaciones:
+            self.ubicacion_combobox.set(all_ubicaciones[0])
+        else:
+            self.ubicacion_combobox.set("N/A")
 
         ctk.CTkLabel(add_book_frame, text="Cantidad Total:", font=BODY_FONT).grid(row=5, column=0, padx=10, pady=8, sticky="w")
         self.cantidad_total_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., 1") # Translated
@@ -1467,7 +1480,7 @@ class App(ctk.CTk):
         # It's better if UI elements requiring "OficinaAdmin" explicitly add it if not present.
 
         # Create a base list for general classroom selection
-        general_classroom_list = updated_classrooms if updated_classrooms else ["(N/A)"] # Changed placeholder
+        general_classroom_list = updated_classrooms if updated_classrooms else ["(N/A)"]
 
         # 3. Refresh classroom combobox in "Gestionar Usuarios" (CSV import)
         if hasattr(self, 'import_csv_classroom_combo'):
@@ -1475,15 +1488,14 @@ class App(ctk.CTk):
             self.import_csv_classroom_combo.configure(values=general_classroom_list)
             if current_csv_class in general_classroom_list and current_csv_class != "(N/A)": # Check against N/A
                 self.import_csv_classroom_combo.set(current_csv_class)
-            elif general_classroom_list[0] != "(N/A)": # Check against N/A before setting
+            elif general_classroom_list[0] != "(N/A)":
                 self.import_csv_classroom_combo.set(general_classroom_list[0])
-            else: # Only N/A is available
-                 self.import_csv_classroom_combo.set(general_classroom_list[0])
-
+            else:
+                 self.import_csv_classroom_combo.set(general_classroom_list[0]) # Sets to "(N/A)"
 
         # 4. Refresh classroom combobox in "Gestionar Usuarios" (user editing)
         um_classroom_list_with_admin = sorted(list(set(updated_classrooms + ["OficinaAdmin"])))
-        if not um_classroom_list_with_admin: um_classroom_list_with_admin = ["N/A"] # Handle if somehow list is empty
+        if not um_classroom_list_with_admin: um_classroom_list_with_admin = ["N/A"]
 
         if hasattr(self, 'um_classroom_combo'):
             current_um_class = self.um_classroom_combo.get()
@@ -1492,8 +1504,8 @@ class App(ctk.CTk):
                 self.um_classroom_combo.set(current_um_class)
             elif um_classroom_list_with_admin[0] != "N/A":
                 self.um_classroom_combo.set(um_classroom_list_with_admin[0])
-            else: # Only N/A is available
-                self.um_classroom_combo.set(um_classroom_list_with_admin[0])
+            else:
+                self.um_classroom_combo.set(um_classroom_list_with_admin[0]) # Sets to "N/A"
 
         # 5. Refresh classroom combobox in "Gestionar Alumnos" (original student tab)
         if hasattr(self, 'student_classroom_combo'):
@@ -1503,41 +1515,55 @@ class App(ctk.CTk):
                 self.student_classroom_combo.set(current_student_tab_class)
             elif general_classroom_list[0] != "(N/A)":
                 self.student_classroom_combo.set(general_classroom_list[0])
-            else: # Only N/A is available
-                self.student_classroom_combo.set(general_classroom_list[0])
+            else:
+                self.student_classroom_combo.set(general_classroom_list[0]) # Sets to "(N/A)"
 
+        # 6. Refresh 'Ubicación' combobox in "Gestionar Libros"
+        if hasattr(self, 'ubicacion_combobox'):
+            fixed_locations_refresh = ["Biblioteca"]
+            combined_ubicaciones_refresh = sorted(list(set(updated_classrooms + fixed_locations_refresh)))
+            display_ubicaciones_refresh = combined_ubicaciones_refresh if combined_ubicaciones_refresh else ["N/A"]
 
-        # 6. Refresh classroom filter in "Ver Libros" (if classrooms are used as ubicaciones)
+            current_selection = self.ubicacion_combobox.get()
+            self.ubicacion_combobox.configure(values=display_ubicaciones_refresh)
+
+            if current_selection in display_ubicaciones_refresh and current_selection != "N/A":
+                self.ubicacion_combobox.set(current_selection)
+            elif combined_ubicaciones_refresh : # If there are actual valid ubicaciones
+                self.ubicacion_combobox.set(combined_ubicaciones_refresh[0])
+            else: # List is empty or only contains "N/A"
+                self.ubicacion_combobox.set("N/A")
+
+        # 7. Refresh classroom filter in "Ver Libros" (self.view_ubicacion_filter)
+        # This one also includes "Todos" and "Biblioteca"
         view_books_ubicaciones_list = updated_classrooms if updated_classrooms else []
-        view_books_ubicaciones = sorted(list(set(view_books_ubicaciones_list + ["Biblioteca", "Todos"])))
-        if not view_books_ubicaciones : view_books_ubicaciones = ["Todos"] # Ensure "Todos" is always an option
+        view_books_options = sorted(list(set(view_books_ubicaciones_list + ["Biblioteca", "Todos"])))
+        if not view_books_options : view_books_options = ["Todos"]
 
         if hasattr(self, 'view_ubicacion_filter'):
             current_view_ubicacion = self.view_ubicacion_filter.get()
-            self.view_ubicacion_filter.configure(values=view_books_ubicaciones)
-            if current_view_ubicacion in view_books_ubicaciones:
+            self.view_ubicacion_filter.configure(values=view_books_options)
+            if current_view_ubicacion in view_books_options:
                 self.view_ubicacion_filter.set(current_view_ubicacion)
-            elif "Todos" in view_books_ubicaciones:
+            elif "Todos" in view_books_options:
                  self.view_ubicacion_filter.set("Todos")
-            elif view_books_ubicaciones: # Fallback to first if "Todos" somehow isn't there
-                self.view_ubicacion_filter.set(view_books_ubicaciones[0])
+            elif view_books_options:
+                self.view_ubicacion_filter.set(view_books_options[0])
 
-
-        # 7. Refresh classroom filter in Leaderboards
+        # 8. Refresh classroom filter in Leaderboards
         if hasattr(self, 'leaderboard_class_filter_combo'):
             if self.leaderboard_filter_type_combo.get() == "🏫 Por Clase":
                 current_leaderboard_class = self.leaderboard_class_filter_combo.get()
-                # Use general_classroom_list, but if it's just ["(N/A)"], use ["No hay clases"] for this specific combo
                 lb_class_list = general_classroom_list if general_classroom_list[0] != "(N/A)" else ["No hay clases"]
                 self.leaderboard_class_filter_combo.configure(values=lb_class_list)
                 if current_leaderboard_class in lb_class_list and current_leaderboard_class != "No hay clases":
                     self.leaderboard_class_filter_combo.set(current_leaderboard_class)
                 elif lb_class_list[0] != "No hay clases":
                     self.leaderboard_class_filter_combo.set(lb_class_list[0])
-                else: # Only "No hay clases" is available
+                else:
                     self.leaderboard_class_filter_combo.set(lb_class_list[0])
 
-        # 8. Refresh leader selector combo in Manage Loans (as it displays classroom names)
+        # 9. Refresh leader selector combo in Manage Loans (as it displays classroom names)
         if hasattr(self, 'refresh_leader_selector_combo'):
             self.refresh_leader_selector_combo()
 
