@@ -1,7 +1,6 @@
-Title,Author,Classroom,ISBN,CoverImage
-The Very Hungry Caterpillar,Eric Carle,Class A,978-0399226908,
-Goodnight Moon,Margaret Wise Brown,Class B,978-0060775858,
-The Gruffalo,Julia Donaldson,Class A,978-0333710937,gruffalo.jpg
-Where the Wild Things Are,Maurice Sendak,Class C,978-0060254926,
-Chicka Chicka Boom Boom,Bill Martin Jr. and John Archambault,Class B,978-1442450707,
-Corduroy,Don Freeman,Class D,978-0670241330,corduroy.png
+Título,Autor,Género,Ubicación,Cantidad_Total
+El Principito,Antoine de Saint-Exupéry,Fábula,Biblioteca,5
+Cien años de soledad,Gabriel García Márquez,Realismo mágico,Biblioteca,3
+Don Quijote de la Mancha,Miguel de Cervantes,Novela,Salón A,2
+Matilda,Roald Dahl,Infantil,Salón B,4
+Harry Potter y la piedra filosofal,J.K. Rowling,Fantasía,Salón C,10

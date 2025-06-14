@@ -80,26 +80,55 @@ def import_books_from_csv_db(file_path):
         with open(file_path, mode='r', encoding='utf-8-sig') as file:
             reader = csv.DictReader(file)
 
-            # Verify headers
-            expected_headers = ["Título", "Autor", "Ubicación", "Cantidad_Total"] # Género is optional
-            # Allow for flexibility with "Genero" vs "Género"
-            actual_headers = reader.fieldnames
-            if not actual_headers:
-                 error_messages.append("El archivo CSV está vacío o no tiene encabezados.")
+            # Fetch valid locations
+            try:
+                distinct_classrooms = student_manager.get_distinct_classrooms()
+            except Exception as e_sm: # Catch potential errors from student_manager call
+                error_messages.append(f"Error al obtener clases existentes: {e_sm}")
+                return successful_imports, error_messages # Stop if we cant get classrooms
+
+            fixed_locations = ["Biblioteca"] # Predefined valid locations
+            valid_locations = set(distinct_classrooms + fixed_locations)
+            if not valid_locations and "Biblioteca" not in fixed_locations:
+                 error_messages.append("No se pudieron determinar ubicaciones válidas (clases o Biblioteca).")
                  return successful_imports, error_messages
 
-            # Normalize actual headers for comparison (e.g. handle BOM if any)
-            normalized_actual_headers = [h.strip() for h in actual_headers]
-
-
-            missing_headers = [eh for eh in expected_headers if eh not in normalized_actual_headers]
-            if missing_headers:
-                error_messages.append(f"El archivo CSV no contiene los encabezados requeridos: {', '.join(missing_headers)}. Encontrados: {', '.join(normalized_actual_headers)}")
+            # Verify headers
+            # User wants: Titulo, autor, genero, ubicación cantidad de ejemplares
+            # We'll check for: Título, Autor, Género, Ubicación, Cantidad_Total
+            expected_primary_headers = ["Título", "Autor", "Ubicación", "Cantidad_Total"] # These must exist as written
+            actual_headers = reader.fieldnames
+            if not actual_headers:
+                error_messages.append("El archivo CSV está vacío o no tiene encabezados.")
                 return successful_imports, error_messages
 
-            # Check for Género header, handle if missing
-            genero_header_present = "Género" in normalized_actual_headers or "Genero" in normalized_actual_headers
-            genero_header_name = "Género" if "Género" in normalized_actual_headers else "Genero" if "Genero" in normalized_actual_headers else None
+            normalized_actual_headers = [h.strip() for h in actual_headers]
+
+            # Define all expected headers. Allow "Genero" as an alternative for "Género".
+            # expected_display_headers = ["Título", "Autor", "Género", "Ubicación", "Cantidad_Total"] # This was a comment, not used
+
+            # Determine the actual header name used for genre
+            genero_header_name = None
+            if "Género" in normalized_actual_headers:
+                genero_header_name = "Género"
+            elif "Genero" in normalized_actual_headers:
+                genero_header_name = "Genero"
+
+            # Check for all required headers
+            missing_headers = []
+            if "Título" not in normalized_actual_headers: missing_headers.append("Título")
+            if "Autor" not in normalized_actual_headers: missing_headers.append("Autor")
+            if not genero_header_name: missing_headers.append("Género (o Genero)") # Add to missing if neither variant found
+            if "Ubicación" not in normalized_actual_headers: missing_headers.append("Ubicación")
+            if "Cantidad_Total" not in normalized_actual_headers: missing_headers.append("Cantidad_Total")
+
+            if missing_headers:
+                error_messages.append(f"El archivo CSV no contiene los encabezados requeridos: {', '.join(missing_headers)}. Asegúrese de que el archivo tenga las columnas: Título, Autor, Género, Ubicación, Cantidad_Total. Encabezados encontrados: {', '.join(normalized_actual_headers)}")
+                return successful_imports, error_messages
+            # genero_header_present is implicitly True if we pass the check above
+            # For compatibility with later code that might use it, let's set it.
+            genero_header_present = True
+
 
 
             for row_num, row in enumerate(reader, start=2):
@@ -107,11 +136,15 @@ def import_books_from_csv_db(file_path):
                 autor = row.get("Autor")
                 ubicacion = row.get("Ubicación")
                 cantidad_total_str = row.get("Cantidad_Total")
-                genero = row.get(genero_header_name) if genero_header_present and genero_header_name else None
+                genero = row.get(genero_header_name)
+                # Validate Ubicación
+                if ubicacion and ubicacion.strip() not in valid_locations:
+                    error_messages.append(f"Fila {row_num}: La ubicación '{ubicacion.strip()}' no es válida. Debe ser una clase existente o 'Biblioteca'. Saltando fila.")
+                    continue # Skip this row
 
 
-                if not titulo or not autor or not ubicacion or not cantidad_total_str:
-                    error_messages.append(f"Fila {row_num}: Faltan campos requeridos (Título, Autor, Ubicación, Cantidad_Total). Saltando fila.")
+                if not titulo or not autor or not ubicacion or not cantidad_total_str or not genero:
+                    error_messages.append(f"Fila {row_num}: Faltan campos requeridos (Título, Autor, Género, Ubicación, Cantidad_Total). Saltando fila.")
                     continue
 
                 try:
