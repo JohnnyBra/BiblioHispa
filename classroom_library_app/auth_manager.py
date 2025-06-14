@@ -23,13 +23,31 @@ def login(username, password):
     for student in all_students:
         # Assuming 'name' is used as the username field
         if student['name'] == username:
+            # Check if user is 'student' and has no password set
+            if student['role'] == 'student' and \
+               (student.get('hashed_password') is None or student.get('hashed_password') == '') and \
+               (student.get('salt') is None or student.get('salt') == ''):
+
+                # For students with no password, allow login if provided password is also empty or None
+                if password is None or password == '':
+                    current_user_id = student['id']
+                    current_user_role = student['role']
+                    return True
+                else:
+                    # Student has no password set, but a password was provided by user
+                    return False # Password mismatch (no password vs some password)
+
+            # Existing logic for users with passwords (students, leaders, admins)
             stored_hashed_password = student.get('hashed_password')
             stored_salt = student.get('salt')
 
+            # This check is important for users who *should* have a password
+            # (e.g. leaders, admins, or students who had a password set)
             if not stored_hashed_password or not stored_salt:
-                # This student does not have password information set up, cannot log in
-                print(f"Warning: Student {username} does not have password/salt set.")
-                continue # Check next student if multiple have same name
+                print(f"Warning: User {username} (role: {student['role']}) is missing password/salt information needed for login.")
+                # If it's a student, this means they were expected to have a password but don't.
+                # If it's an admin/leader, they MUST have a password.
+                return False # Cannot log in without password info if it's expected.
 
             if student_manager.verify_password(stored_hashed_password, stored_salt, password):
                 current_user_id = student['id']
@@ -71,94 +89,148 @@ if __name__ == '__main__':
 
     print("Testing Auth Manager...")
 
-    # Attempt to add a test admin user if not present (requires DB setup and student_manager)
-    # This is a simplified setup for testing.
-    # In a real app, user creation would be more robust.
     try:
-        print("\nAttempting to ensure test users exist...")
-        # Check if db_setup needs to be run (if db file doesn't exist or is empty)
-        # This is tricky to do perfectly without more context on project structure & execution path.
-        # For now, we assume student_manager.py can be run to populate some data if its __main__ is invoked.
+        from database import db_setup
+        print("Initializing DB for auth_manager tests (if needed)...")
+        db_setup.init_db()
+    except ImportError:
+        print("Warning: Could not import db_setup to initialize database for tests.")
+        print("         Please ensure classroom_library_app is in PYTHONPATH or run tests from project root.")
+    except Exception as e_init:
+        print(f"Error initializing DB for tests: {e_init}")
 
-        admin_id = student_manager.add_student_db("TestAdmin", "AdminOffice", "adminpass", "admin")
-        student_id = student_manager.add_student_db("TestStudent", "ClassA", "studentpass", "student")
+    test_admin_name = "TestAdminAuth"
+    test_student_with_pass_name = "TestStudentWithPassAuth"
+    test_student_no_pass_name = "TestStudentNoPassAuth"
+    test_leader_name = "TestLeaderAuth"
 
+    admin_id = None
+    student_id_with_pass = None
+    student_id_no_pass = None
+    leader_id = None
+
+    try:
+        print("\nAttempting to ensure test users exist for auth_manager tests...")
+
+        admin_id = student_manager.add_student_db(test_admin_name, "AdminOffice", "adminpass123", "admin")
         if admin_id:
-            print(f"TestAdmin user ensured/created with ID: {admin_id}")
+            print(f"'{test_admin_name}' user ensured/created with ID: {admin_id}")
         else:
-            # Attempt to find existing TestAdmin if add failed (e.g. unique constraint on name if names were unique)
-            # For this test, we'll just note if add failed.
-            print("Could not add TestAdmin. It might already exist or there's a DB issue.")
-            # Try to fetch existing admin to continue tests
-            admins = student_manager.get_students_db(role_filter="admin")
-            test_admin_exists = any(s['name'] == "TestAdmin" for s in admins)
-            if not test_admin_exists:
-                 print("Failed to create or find TestAdmin. Login tests for admin might fail.")
+            print(f"Could not add '{test_admin_name}'. It might already exist or there's a DB issue.")
 
-
-        if student_id:
-            print(f"TestStudent user ensured/created with ID: {student_id}")
+        student_id_with_pass = student_manager.add_student_db(test_student_with_pass_name, "ClassAuth", "studentpass123", "student")
+        if student_id_with_pass:
+            print(f"'{test_student_with_pass_name}' user ensured/created with ID: {student_id_with_pass}")
         else:
-            print("Could not add TestStudent. It might already exist or there's a DB issue.")
-            students = student_manager.get_students_db(role_filter="student")
-            test_student_exists = any(s['name'] == "TestStudent" for s in students)
-            if not test_student_exists:
-                 print("Failed to create or find TestStudent. Login tests for student might fail.")
+            print(f"Could not add '{test_student_with_pass_name}'. It might already exist.")
 
+        student_id_no_pass = student_manager.add_student_db(test_student_no_pass_name, "ClassAuth", None, "student")
+        if student_id_no_pass:
+            print(f"'{test_student_no_pass_name}' user (no password) ensured/created with ID: {student_id_no_pass}")
+        else:
+            print(f"Could not add '{test_student_no_pass_name}'. It might already exist.")
+
+        leader_id = student_manager.add_student_db(test_leader_name, "LeaderOffice", "leaderpass123", "leader")
+        if leader_id:
+            print(f"'{test_leader_name}' user ensured/created with ID: {leader_id}")
+        else:
+            print(f"Could not add '{test_leader_name}'. It might already exist.")
+
+        if student_id_no_pass:
+            fetched_no_pass_student = student_manager.get_student_by_id_db(student_id_no_pass)
+            if fetched_no_pass_student:
+                print(f"  Verification for '{test_student_no_pass_name}': "
+                      f"Salt is '{fetched_no_pass_student.get('salt')}', "
+                      f"Hash is '{fetched_no_pass_student.get('hashed_password')}' (expected None or empty for both)")
+            else:
+                print(f"  Could not fetch '{test_student_no_pass_name}' to verify salt/hash.")
+        else:
+            print(f"  Skipping verification for '{test_student_no_pass_name}' as it was not added successfully.")
 
     except Exception as e:
-        print(f"Error during test user setup: {e}")
+        print(f"Error during test user setup for auth_manager: {e}")
         print("Please ensure database is initialized and student_manager is functional.")
 
-    # Test login
-    print("\nTesting login...")
-    login_success_admin = login("TestAdmin", "adminpass")
-    print(f"Admin login with correct password ('TestAdmin', 'adminpass'): {login_success_admin}") # Expected: True
+    print("\nTesting login scenarios...")
 
-    if login_success_admin:
-        print(f"Current User ID: {get_current_user_id()}")
-        print(f"Current User Role: {get_current_user_role()}")
-        print(f"Is user logged in? {is_user_logged_in()}") # Expected: True
-        print(f"Is user admin? {is_admin()}") # Expected: True
-        logout()
-        print(f"After logout, is user logged in? {is_user_logged_in()}") # Expected: False
-        print(f"After logout, current user role: {get_current_user_role()}") # Expected: None
+    if admin_id:
+        login_success_admin = login(test_admin_name, "adminpass123")
+        print(f"1. Admin login ('{test_admin_name}', 'adminpass123'): {login_success_admin} (Expected: True)")
+        if login_success_admin: logout()
 
-    login_fail_wrong_pass = login("TestAdmin", "wrongpass")
-    print(f"Admin login with incorrect password ('TestAdmin', 'wrongpass'): {login_fail_wrong_pass}") # Expected: False
+        login_fail_admin_wrong_pass = login(test_admin_name, "wrongpass")
+        print(f"   Admin login ('{test_admin_name}', 'wrongpass'): {login_fail_admin_wrong_pass} (Expected: False)")
+    else:
+        print(f"Skipping admin login tests for '{test_admin_name}' as user was not added.")
 
-    login_fail_no_user = login("NoSuchUser", "anypass")
-    print(f"Login with non-existent user ('NoSuchUser', 'anypass'): {login_fail_no_user}") # Expected: False
+    if student_id_with_pass:
+        login_success_student_wp = login(test_student_with_pass_name, "studentpass123")
+        print(f"2. Student with password ('{test_student_with_pass_name}', 'studentpass123'): {login_success_student_wp} (Expected: True)")
+        if login_success_student_wp: logout()
 
-    login_success_student = login("TestStudent", "studentpass")
-    print(f"Student login with correct password ('TestStudent', 'studentpass'): {login_success_student}") # Expected: True
+        login_fail_student_wp_wrong_pass = login(test_student_with_pass_name, "wrongpass")
+        print(f"   Student with password ('{test_student_with_pass_name}', 'wrongpass'): {login_fail_student_wp_wrong_pass} (Expected: False)")
 
-    if login_success_student:
-        print(f"Current User ID: {get_current_user_id()}")
-        print(f"Current User Role: {get_current_user_role()}")
-        print(f"Is user logged in? {is_user_logged_in()}") # Expected: True
-        print(f"Is user admin? {is_admin()}") # Expected: False
-        logout()
+        login_fail_student_wp_empty_pass = login(test_student_with_pass_name, "")
+        print(f"   Student with password ('{test_student_with_pass_name}', ''): {login_fail_student_wp_empty_pass} (Expected: False)")
+    else:
+        print(f"Skipping student with password tests for '{test_student_with_pass_name}' as user was not added.")
 
-    print("\nTesting with a user that might not have password fields (if any added manually without password):")
-    # To test this properly, you'd need a student in DB without hashed_password/salt,
-    # or modify an existing one.
-    # For now, this is a placeholder for that test concept.
-    # Example: student_manager.add_student_db("NoPassUser", "ClassZ", role="student") # but add_student_db now requires password
-    # So, this case is less likely with current student_manager.py unless DB is manually altered.
-    # We can simulate by trying to log in as a user that might exist from previous runs but no password.
+    if student_id_no_pass:
+        login_success_student_no_pass_empty = login(test_student_no_pass_name, "")
+        print(f"3. Student without password ('{test_student_no_pass_name}', ''): {login_success_student_no_pass_empty} (Expected: True)")
+        if login_success_student_no_pass_empty:
+            logout()
 
-    # Assuming a user "OldUser" might exist from previous tests before password logic was added
-    # This part of the test is speculative without knowing the exact state of the DB over time.
-    # If student_manager.py's main was run before password fields, such users might exist.
-    # However, db_setup.py would ensure the columns exist.
+        login_success_student_no_pass_none = login(test_student_no_pass_name, None)
+        print(f"   Student without password ('{test_student_no_pass_name}', None): {login_success_student_no_pass_none} (Expected: True)")
+        if login_success_student_no_pass_none: logout()
 
-    print("Login attempt for 'Alice Wonderland' (password 'password123' - from student_manager tests):")
-    # This relies on student_manager.py's test data if its __main__ was run
-    alice_login_test = login("Alice Wonderland", "password123")
-    print(f"Login for Alice: {alice_login_test}")
-    if alice_login_test:
-        print(f"Alice role: {get_current_user_role()}")
-        logout()
+        login_fail_student_no_pass_with_pass = login(test_student_no_pass_name, "anypassword")
+        print(f"   Student without password ('{test_student_no_pass_name}', 'anypassword'): {login_fail_student_no_pass_with_pass} (Expected: False)")
+    else:
+        print(f"Skipping student without password tests for '{test_student_no_pass_name}' as user was not added.")
+
+    if leader_id:
+        login_success_leader = login(test_leader_name, "leaderpass123")
+        print(f"4. Leader login ('{test_leader_name}', 'leaderpass123'): {login_success_leader} (Expected: True)")
+        if login_success_leader: logout()
+
+        login_fail_leader_wrong_pass = login(test_leader_name, "wrongpass")
+        print(f"   Leader login ('{test_leader_name}', 'wrongpass'): {login_fail_leader_wrong_pass} (Expected: False)")
+
+        login_fail_leader_empty_pass = login(test_leader_name, "")
+        print(f"   Leader login ('{test_leader_name}', ''): {login_fail_leader_empty_pass} (Expected: False)")
+    else:
+        print(f"Skipping leader login tests for '{test_leader_name}' as user was not added.")
+
+    login_fail_no_user = login("NoSuchUserAuth", "anypass")
+    print(f"5. Login with non-existent user ('NoSuchUserAuth', 'anypass'): {login_fail_no_user} (Expected: False)")
+
+    print(f"\nAfter all login tests, is user logged in? {is_user_logged_in()} (Expected: False)")
+    print(f"Current user ID: {get_current_user_id()} (Expected: None)")
+    print(f"Current user role: {get_current_user_role()} (Expected: None)")
+
+    print("\nLegacy Test: Login attempt for 'Alice Wonderland' (password 'password123' - from student_manager.py tests, if run):")
+    alice_exists = False
+    try:
+        all_students_for_alice_check = student_manager.get_students_db()
+        if any(s['name'] == "Alice Wonderland" for s in all_students_for_alice_check):
+            alice_exists = True
+    except Exception as e_alice_check:
+        print(f"Could not check for Alice Wonderland due to: {e_alice_check}")
+
+    if alice_exists:
+        alice_login_test = login("Alice Wonderland", "password123")
+        print(f"Login for Alice: {alice_login_test} (Expected: True if Alice was added with this password)")
+        if alice_login_test:
+            print(f"Alice role: {get_current_user_role()}")
+            logout()
+
+        alice_login_empty_pass_test = login("Alice Wonderland", "")
+        print(f"Login for Alice with empty password: {alice_login_empty_pass_test} (Expected: False if Alice has a password)")
+        if alice_login_empty_pass_test: logout()
+    else:
+        print("Alice Wonderland not found in DB or could not be checked, skipping her specific legacy tests.")
 
     print("\nAuth Manager tests finished.")

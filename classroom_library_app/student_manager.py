@@ -62,10 +62,16 @@ def verify_password(stored_hashed_password_hex, salt_hex, provided_password):
         return False
 
 def add_student_db(name, classroom, password, role='student'):
-    """Adds a new student to the database with a hashed password.
+    """Adds a new student to the database.
+    If password is provided, it's hashed. Otherwise, salt and hash are stored as None.
     Returns the new student's ID or None on failure."""
     student_id = generate_student_id()
-    salt_hex, hashed_password_hex = hash_password(password)
+
+    if password: # Check if password is not None and not an empty string
+        salt_hex, hashed_password_hex = hash_password(password)
+    else:
+        salt_hex, hashed_password_hex = None, None
+
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
@@ -260,6 +266,130 @@ def get_distinct_classrooms():
             conn.close()
     return classrooms
 
+def rename_classroom(old_classroom_name, new_classroom_name):
+    """
+    Renames a classroom for all students in it.
+
+    Args:
+        old_classroom_name (str): The current name of the classroom.
+        new_classroom_name (str): The new name for the classroom.
+
+    Returns:
+        bool: True if at least one student's classroom was updated, False otherwise.
+    """
+    if not new_classroom_name or not new_classroom_name.strip():
+        print("Error: New classroom name cannot be empty or just whitespace.")
+        return False
+    if old_classroom_name == new_classroom_name:
+        print("Info: Old and new classroom names are the same. No change made.")
+        return False # Or True, depending on desired behavior for no-op
+
+    conn = None
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        cursor = conn.cursor()
+        cursor.execute("UPDATE students SET classroom = ? WHERE classroom = ?",
+                       (new_classroom_name.strip(), old_classroom_name))
+        conn.commit()
+        if cursor.rowcount > 0:
+            print(f"Successfully renamed classroom '{old_classroom_name}' to '{new_classroom_name}' for {cursor.rowcount} students.")
+            return True
+        else:
+            print(f"No students found in classroom '{old_classroom_name}'. No changes made.")
+            return False
+    except sqlite3.Error as e:
+        print(f"Database error in rename_classroom: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+# --- CSV Import Functionality ---
+import csv
+import io # For testing with StringIO
+
+def import_students_from_csv(file_path, classroom_name):
+    """
+    Imports students from a CSV file.
+    Each row in the CSV should contain: last_name, first_name
+    Students are added with role='student' and no password.
+
+    Args:
+        file_path (str): The path to the CSV file.
+        classroom_name (str): The classroom to assign to these students.
+
+    Returns:
+        tuple: (success_count, errors_list)
+               success_count is the number of students successfully added.
+               errors_list contains descriptions of errors encountered.
+    """
+    success_count = 0
+    errors = []
+
+    if not classroom_name or not classroom_name.strip():
+        errors.append("Classroom name cannot be empty.")
+        return success_count, errors
+
+    try:
+        with open(file_path, mode='r', newline='', encoding='utf-8') as csvfile:
+            csv_reader = csv.reader(csvfile)
+            header = next(csv_reader, None) # Skip header row if it exists
+
+            for row_num, row in enumerate(csv_reader, start=1): # Start row_num at 1 for user messages
+                try:
+                    last_name_str = None
+                    first_name_str = None
+
+                    if not row: # Handle completely empty rows
+                        errors.append(f"Row {row_num}: Empty row.")
+                        continue
+
+                    if len(row) == 1:
+                        # csv.reader handles unquoting. If a field was quoted and contained a comma,
+                        # it will still be a single element in `row` after initial parsing.
+                        content = row[0].strip()
+                        parts = content.split(',', 1)  # Split only on the first comma
+                        if len(parts) == 2:
+                            last_name_str = parts[0].strip()
+                            first_name_str = parts[1].strip()
+                        else:
+                            # Single field that doesn't contain "lastname,firstname"
+                            errors.append(f"Row {row_num}: Malformed data (single field does not contain 'lastname,firstname'): '{row[0]}'")
+                            continue
+                    elif len(row) == 2:
+                        last_name_str = row[0].strip()
+                        first_name_str = row[1].strip()
+                    else: # len(row) is 0 (already handled by 'if not row') or > 2
+                        errors.append(f"Row {row_num}: Malformed data (expected 1 or 2 fields per row after CSV parsing, got {len(row)}): '{','.join(row)}'")
+                        continue
+
+                    # Check if names are empty after stripping
+                    if not last_name_str or not first_name_str:
+                        errors.append(f"Row {row_num}: Missing first or last name after parsing. Original content: '{','.join(row)}'")
+                        continue
+
+                    full_name = f"{first_name_str} {last_name_str}".strip()
+                    if not full_name: # Should be caught by the above, but as a safeguard
+                        errors.append(f"Row {row_num}: Resulting full name is empty. Original content: '{','.join(row)}'")
+                        continue
+
+                    student_id = add_student_db(name=full_name, classroom=classroom_name, password=None, role='student')
+                    if student_id:
+                        success_count += 1
+                    else:
+                        errors.append(f"Row {row_num}: Failed to add student '{full_name}' to database.")
+                except IndexError: # Should be caught by len(row) < 2, but as an additional safeguard
+                    errors.append(f"Row {row_num}: Malformed data (likely missing fields). Content: '{','.join(row)}'")
+                except Exception as e: # Catch any other unexpected errors during row processing
+                    errors.append(f"Row {row_num}: An unexpected error occurred: {e}. Content: '{','.join(row)}'")
+    except FileNotFoundError:
+        errors.append(f"Error: The file '{file_path}' was not found.")
+    except Exception as e: # Catch other errors like permission issues
+        errors.append(f"An unexpected error occurred while opening or reading the file: {e}")
+
+    return success_count, errors
+
+
 if __name__ == '__main__':
     # This section is for testing purposes.
     # Ensure db_setup.py has been run or main.py to create tables.
@@ -278,6 +408,22 @@ if __name__ == '__main__':
     s5_id = add_student_db("Edward Scissorhands", "Class A", "edwardpass", "student")
     s6_id = add_student_db("Admin User", "AdminOffice", "adminpass", "admin")
 
+
+    # Test adding student with no password
+    s_no_pass_id = add_student_db("NoPass User", "Class C", None, "student")
+    print(f"Added NoPass User (Student, Class C, no password): {s_no_pass_id}")
+    if s_no_pass_id:
+        no_pass_student = get_student_by_id_db(s_no_pass_id)
+        if no_pass_student:
+            print(f"  Fetched NoPass User: Name='{no_pass_student['name']}', Salt='{no_pass_student['salt']}', HashedPassword='{no_pass_student['hashed_password']}'")
+            if no_pass_student['salt'] is None and no_pass_student['hashed_password'] is None:
+                print("  SUCCESS: Salt and hashed_password are None as expected for NoPass User.")
+            else:
+                print("  FAILURE: Salt and/or hashed_password are NOT None for NoPass User.")
+        else:
+            print("  FAILURE: Could not fetch NoPass User to verify.")
+    else:
+        print("  FAILURE: Could not add NoPass User.")
 
     print(f"Added Alice (Leader, Class A): {s1_id}")
     print(f"Added Bob (Student, Class A): {s2_id}")
@@ -379,3 +525,220 @@ if __name__ == '__main__':
             print("  Failed to fetch user after update.")
     else:
         print("Failed to add s7_id for update details test.")
+
+    print("\n--- Testing CSV Import ---")
+
+    # Create a dummy CSV for testing using io.StringIO
+    csv_content_valid = "Doe,John\nSmith,Jane\nBond,James"
+    csv_file_valid = io.StringIO(csv_content_valid)
+
+    # Create a temporary file path for testing FileNotFoundError
+    # This is a bit of a hack for testing; normally, you'd mock os.path.exists or similar
+    # For this environment, we'll just use a non-existent path.
+    non_existent_file_path = "temp_test_students_non_existent.csv"
+
+    # Create a dummy CSV file on disk for more realistic testing
+    temp_csv_file_path = "temp_test_students.csv"
+
+    # Test case 1: Valid CSV import
+    print("\nTest Case 1: Valid CSV")
+    with open(temp_csv_file_path, 'w', newline='') as f:
+        f.write("LastName,FirstName\n") # With header
+        f.write("Doe,John\n")
+        f.write("Smith,Jane\n")
+        f.write("Bond,James\n")
+        f.write("Skywalker, Luke\n") # Name with space
+
+    success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 1")
+    print(f"  Successfully imported: {success_count}")
+    print(f"  Errors: {errors}")
+    # Expected: 4 successes, 0 errors (or 3 if header isn't skipped, but it is now)
+    # Let's verify by fetching these students
+    if success_count > 0:
+        csv_students = get_students_db(classroom_filter="Test Class CSV 1")
+        print(f"  Students found in 'Test Class CSV 1': {len(csv_students)}")
+        # for s in csv_students:
+        #     if s['name'] in ["John Doe", "Jane Smith", "James Bond", "Luke Skywalker"]:
+        #         print(f"    Found: {s['name']}, No-Pass: {s['hashed_password'] is None}")
+
+
+    # Test case 2: Malformed CSV (missing fields, extra fields, empty names)
+    print("\nTest Case 2: Malformed CSV")
+    csv_content_malformed = (
+        "SoloLastName\n"  # Missing first name
+        "Mouse,Mickey,ExtraField\n" # Extra field (should still process first two)
+        ",\n"             # Both empty
+        "OnlyFirstName,\n" # Empty last name
+        ",OnlyLastName\n"  # Empty first name
+        "Good,Row\n"
+    )
+    with open(temp_csv_file_path, 'w', newline='') as f:
+        f.write("HeaderLast,HeaderFirst\n") # With header
+        f.write(csv_content_malformed)
+
+    success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 2")
+    print(f"  Successfully imported: {success_count}") # Expected: 1 (Mickey Mouse, Row Good)
+    print(f"  Errors: {len(errors)} errors")
+    for err in errors:
+        print(f"    - {err}")
+    # Expected errors for: SoloLastName, empty_row, OnlyFirstName, OnlyLastName.
+    # "Mouse,Mickey,ExtraField" should succeed as "Mickey Mouse" (first two fields taken)
+    # "Good,Row" should succeed.
+
+    # Test case 3: File Not Found (already exists, good)
+    print("\nTest Case 3: File Not Found")
+    success_count, errors = import_students_from_csv(non_existent_file_path, "Test Class CSV 3")
+    print(f"  Successfully imported: {success_count}") # Expected: 0
+    print(f"  Errors: {errors}") # Expected: ["Error: The file '...' was not found."]
+
+    # Test case 3b: New format CSV import - Relying on csv.reader's default unquoting
+    print("\nTest Case 3b: New Format CSV (single and mixed fields, csv.reader handles quotes)")
+    # When writing to a file that csv.reader will process:
+    # - If you want a field to contain a comma, you must quote it: "Doe,John"
+    # - If a field is already quoted in your source string, and you write it directly,
+    #   it might result in double quoting if not handled carefully by the writer.
+    #   However, here we are just creating the string content.
+    #   The csv.reader will interpret "Doe,John" as a single field 'Doe,John'.
+    #   It will interpret Doe,John (no quotes) as two fields 'Doe' and 'John'.
+    csv_content_new_format = (
+        'CombinedNameOrLastName,FirstNameIfSeparate\n'  # Header
+        '"Doe,John"\n'                 # Parsed by csv.reader as ['Doe,John']
+        '"Smith, Jane"\n'              # Parsed as ['Smith, Jane']
+        '"O\'Malley,Sean"\n'           # Parsed as ["O'Malley,Sean"]
+        'Regular,Entry\n'              # Parsed as ['Regular', 'Entry']
+        'JustOneValueNoComma\n'        # Parsed as ['JustOneValueNoComma'] -> error in our logic
+        '"JustOneValueInQuotes"\n'     # Parsed as ['JustOneValueInQuotes'] -> error in our logic
+        '"Bond, James, ExtraPart"\n'   # Parsed as ['Bond, James, ExtraPart'] -> split logic takes 'Bond' and ' James, ExtraPart'
+        ',""\n'                        # Parsed as ['', ''] -> error: last name empty
+        'NoLastName,\n'                # Parsed as ['NoLastName', ''] -> error: first name empty
+        '"",""\n'                      # Parsed as ['', ''] -> error: last name empty
+        '" "," "\n'                    # Parsed as [' ', ' '] -> error: last name empty (after strip)
+        '"OnlyLast," \n'               # Parsed as ['OnlyLast,'] -> split -> 'OnlyLast' and '' -> error: first name empty
+        '",OnlyFirst"\n'               # Parsed as [',OnlyFirst'] -> split -> '' and 'OnlyFirst' -> error: last name empty
+        'CompletelyEmptyRow\n'         # This line will be skipped by `if not row:` if csv.reader yields an empty list for it.
+                                       # If it yields ['CompletelyEmptyRow'], it will be an error.
+                                       # If it's truly an empty line in the file, csv.reader skips it by default.
+        '  LeadingSpace,TrailingSpace  \n' # Parsed as ['  LeadingSpace', 'TrailingSpace  '] -> names will be stripped
+    )
+    with open(temp_csv_file_path, 'w', newline='') as f:
+        f.write(csv_content_new_format)
+
+    success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 3b")
+    print(f"  Successfully imported: {success_count}")
+    # Expected: John Doe, Jane Smith, Sean O'Malley, Entry Regular, James Bond (from "Bond, James, ExtraPart"), TrailingSpace LeadingSpace = 6
+    print(f"  Errors: {len(errors)} errors")
+    for err in errors:
+        print(f"    - {err}")
+    # Expected errors for:
+    # JustOneValueNoComma (single field no comma)
+    # "JustOneValueInQuotes" (single field no comma)
+    # ,"" (empty last name)
+    # NoLastName, (empty first name)
+    # "","" (empty last name)
+    # " "," " (empty last name)
+    # "OnlyLast," (empty first name)
+    # ",OnlyFirst" (empty last name)
+
+    # Verify successful imports for 3b
+    if success_count > 0:
+        csv_students_3b = get_students_db(classroom_filter="Test Class CSV 3b")
+        print(f"  Students found in 'Test Class CSV 3b': {len(csv_students_3b)}")
+        expected_names_3b = ["John Doe", "Jane Smith", "Sean O'Malley", "Entry Regular", "James Bond", "TrailingSpace LeadingSpace"]
+        imported_names_3b = sorted([s['name'] for s in csv_students_3b])
+        print(f"  Imported names: {imported_names_3b}")
+        for name in sorted(expected_names_3b):
+            if name in imported_names_3b:
+                print(f"    SUCCESS: Found '{name}'")
+            else:
+                print(f"    FAILURE: Did not find '{name}'")
+        # Check count carefully
+        if len(imported_names_3b) == len(expected_names_3b):
+             print(f"    SUCCESS: Correct number of students imported ({len(expected_names_3b)}).")
+        else:
+             print(f"    FAILURE: Incorrect number of students imported. Expected {len(expected_names_3b)}, got {len(imported_names_3b)}.")
+
+
+    # Test case 4: Empty classroom name (already exists, good)
+    print("\nTest Case 4: Empty Classroom Name")
+    with open(temp_csv_file_path, 'w', newline='') as f: # re-use valid content
+        f.write("Doe,John\n")
+    success_count, errors = import_students_from_csv(temp_csv_file_path, "  ") # Empty classroom
+    print(f"  Successfully imported: {success_count}") # Expected: 0
+    print(f"  Errors: {errors}") # Expected: ["Classroom name cannot be empty."]
+
+
+    # Test case 5: CSV with only a header
+    print("\nTest Case 5: CSV with only a header")
+    with open(temp_csv_file_path, 'w', newline='') as f:
+        f.write("Col1,Col2\n")
+    success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 5")
+    print(f"  Successfully imported: {success_count}") # Expected: 0
+    print(f"  Errors: {errors}") # Expected: []
+
+    # Test case 6: Empty CSV file
+    print("\nTest Case 6: Empty CSV file")
+    with open(temp_csv_file_path, 'w', newline='') as f:
+        pass # Create empty file
+    success_count, errors = import_students_from_csv(temp_csv_file_path, "Test Class CSV 6")
+    print(f"  Successfully imported: {success_count}") # Expected: 0
+    print(f"  Errors: {errors}") # Expected: [] (header skip handles this gracefully)
+
+
+    # --- Test Classroom Renaming ---
+    print("\n--- Testing Classroom Renaming ---")
+    # Add some students to a test classroom
+    rename_test_class_old = "RenameTestClassOld"
+    rename_test_class_new = "RenameTestClassNew"
+    add_student_db("Rename Student 1", rename_test_class_old, None)
+    add_student_db("Rename Student 2", rename_test_class_old, None)
+    add_student_db("Rename Student Other", "OtherClassUnchanged", None)
+
+    print(f"Initial students in '{rename_test_class_old}':")
+    for s in get_students_db(classroom_filter=rename_test_class_old):
+        print(f"  - {s['name']}")
+
+    # Test successful rename
+    print(f"\nAttempting to rename '{rename_test_class_old}' to '{rename_test_class_new}'...")
+    rename_success = rename_classroom(rename_test_class_old, rename_test_class_new)
+    print(f"Rename operation success: {rename_success}") # Expected: True
+
+    print(f"Students in '{rename_test_class_new}' after rename:")
+    students_in_new = get_students_db(classroom_filter=rename_test_class_new)
+    for s in students_in_new:
+        print(f"  - {s['name']}")
+    if len(students_in_new) == 2:
+        print("  SUCCESS: Correct number of students in new class name.")
+    else:
+        print(f"  FAILURE: Incorrect number of students. Expected 2, got {len(students_in_new)}")
+
+    print(f"Students in '{rename_test_class_old}' after rename (should be 0):")
+    students_in_old_after_rename = get_students_db(classroom_filter=rename_test_class_old)
+    if not students_in_old_after_rename:
+        print("  SUCCESS: No students found in old class name.")
+    else:
+        print(f"  FAILURE: Found {len(students_in_old_after_rename)} students still in old class name.")
+
+
+    # Test renaming non-existent class
+    print("\nAttempting to rename a non-existent class ('NonExistentClassOld' to 'NonExistentClassNew')...")
+    rename_non_existent_success = rename_classroom("NonExistentClassOld", "NonExistentClassNew")
+    print(f"Rename non-existent class success: {rename_non_existent_success}") # Expected: False
+
+    # Test renaming to empty/whitespace name
+    print(f"\nAttempting to rename '{rename_test_class_new}' to an empty string...")
+    rename_to_empty_success = rename_classroom(rename_test_class_new, "   ")
+    print(f"Rename to empty string success: {rename_to_empty_success}") # Expected: False
+    # Verify students are still in rename_test_class_new
+    students_after_empty_attempt = get_students_db(classroom_filter=rename_test_class_new)
+    if len(students_after_empty_attempt) == 2:
+        print(f"  SUCCESS: Students correctly remained in '{rename_test_class_new}'.")
+    else:
+        print(f"  FAILURE: Student count in '{rename_test_class_new}' changed after attempting rename to empty.")
+
+
+    # Clean up the temporary file
+    try:
+        os.remove(temp_csv_file_path)
+        print(f"\nCleaned up temporary file: {temp_csv_file_path}")
+    except OSError as e:
+        print(f"\nError cleaning up temporary file {temp_csv_file_path}: {e}")
