@@ -459,15 +459,35 @@ class App(ctk.CTk):
         self.refresh_student_list_ui()
 
     def add_student_ui(self):
-        name = self.student_name_entry.get()
-        classroom = self.student_classroom_combo.get()
-        role = self.student_role_combo.get()
+        name = self.student_name_entry.get().strip()
+        classroom_raw = self.student_classroom_combo.get()
+        role_spanish = self.student_role_combo.get() # This is 'alumno', 'líder', etc.
 
-        if not name or not classroom or not role:
-            messagebox.showerror("¡Un Segundo! 🚦", "¡Uy! Nombre, Clase y Rol son requeridos para añadir un alumno.") # Translated
+        # Validate inputs
+        if not name: # Name is primary, check first
+            messagebox.showerror("Error de Entrada", "El nombre del alumno no puede estar vacío.")
             return
 
-        student_id = student_manager.add_student_db(name, classroom, role) # Assuming student_manager.add_student_db handles 'alumno', 'líder'
+        classroom_stripped = classroom_raw.strip()
+        if not classroom_stripped or classroom_stripped == "N/A":
+            messagebox.showerror("Error de Entrada", "Por favor, seleccione o introduzca un nombre de clase válido.")
+            return
+
+        if not role_spanish: # Should not happen if combobox has a default
+            messagebox.showerror("Error de Entrada", "El rol es requerido.")
+            return
+
+        # Map Spanish role to English for database
+        # This tab is simpler and might only add 'student' or 'leader' if 'admin' role is restricted to user management tab
+        role_map_simple = {
+            "alumno": "student",
+            "líder": "leader"
+            # Not including 'admin' here as this tab might be for non-admin user management
+        }
+        role_english = role_map_simple.get(role_spanish, "student") # Default to student
+
+        # For this simplified tab, password is not set directly, so it will be None
+        student_id = student_manager.add_student_db(name, classroom_stripped, None, role_english)
         if student_id:
             messagebox.showinfo("¡Fantástico! ✨", f"¡El alumno '{name}' se ha unido al listado!") # Translated
             self.student_name_entry.delete(0, "end")
@@ -703,11 +723,19 @@ class App(ctk.CTk):
                 self.lend_book_button.configure(state="disabled")
 
         # Populate Return Book ComboBox
-        # Using current_leader_classroom to filter loans relevant to the leader's operational scope
-        active_loans_in_ubicacion = book_manager.get_current_loans_db(ubicacion_filter=self.current_leader_classroom)
+        # New Logic: Fetch all loans, then filter by students in the leader's class
+        students_in_leader_class = student_manager.get_students_by_classroom_db(self.current_leader_classroom)
+        student_ids_in_leader_class = [s['id'] for s in students_in_leader_class]
+
+        all_active_loans = book_manager.get_current_loans_db(ubicacion_filter=None, student_id_filter=None) # Ensure fetching all
+
+        relevant_loans_for_return = []
+        if all_active_loans: # Ensure all_active_loans is not None
+            relevant_loans_for_return = [loan for loan in all_active_loans if loan.get('student_id') in student_ids_in_leader_class]
+
         self.return_book_map = {}
         return_book_display_names = []
-        for loan in active_loans_in_ubicacion:
+        for loan in relevant_loans_for_return:
             due_date_str = loan.get('due_date', 'N/A')
             due_date_display = 'N/A'
             if due_date_str != 'N/A':
@@ -717,13 +745,13 @@ class App(ctk.CTk):
                 except ValueError:
                     due_date_display = due_date_str
 
-            display_text = f"{loan.get('titulo', 'N/A')} (Prestatario: {loan.get('borrower_name', 'N/A')}) Vence: {due_date_display}" # Translated "Borrower" and "Due"
+            display_text = f"{loan.get('titulo', 'N/A')} (Prestatario: {loan.get('borrower_name', 'N/A')}) Vence: {due_date_display}"
             self.return_book_map[display_text] = loan['loan_id']
             return_book_display_names.append(display_text)
 
         if not return_book_display_names:
-            self.return_book_combo.configure(values=["No hay libros prestados"], state="disabled") # Translated
-            self.return_book_combo.set("No hay libros prestados") # Translated
+            self.return_book_combo.configure(values=["No hay libros prestados por alumnos de esta clase"], state="disabled") # Updated placeholder
+            self.return_book_combo.set("No hay libros prestados por alumnos de esta clase") # Updated placeholder
         else:
             self.return_book_combo.configure(values=return_book_display_names, state="normal")
             self.return_book_combo.set(return_book_display_names[0])
@@ -1167,22 +1195,19 @@ class App(ctk.CTk):
         }
         role_english = role_map.get(role_spanish.lower(), "student") # Default to student
 
-        # Validate classroom input
-        if not classroom or classroom == "N/A" or classroom == "OficinaAdmin" and role_english != "admin": # Basic validation, "OficinaAdmin" might be special
-             # More specific error if trying to assign non-admin to AdminOffice, or just general invalid class
-            if classroom == "OficinaAdmin" and role_english != "admin":
+        # Validate classroom input (strip first)
+        classroom_stripped = classroom.strip()
+        if not classroom_stripped or classroom_stripped == "N/A" or (classroom_stripped == "OficinaAdmin" and role_english != "admin"):
+            if classroom_stripped == "OficinaAdmin" and role_english != "admin":
                 messagebox.showerror("Error de Entrada", "Solo los administradores pueden ser asignados a 'OficinaAdmin'.")
             else:
                 messagebox.showerror("Error de Entrada", "Por favor, seleccione o introduzca un nombre de clase/oficina válido.")
             return
 
-        student_id = student_manager.add_student_db(name, classroom, password, role_english)
+        student_id = student_manager.add_student_db(name, classroom_stripped, password, role_english)
         if student_id:
             messagebox.showinfo("Éxito", f"Usuario '{name}' ({role_english}) añadido con éxito. ID: {student_id}") # Translated
-            self.clear_user_form_ui(clear_selection=False) # Keep form data for quick multi-add if desired, but clear selection
-            # self.refresh_user_list_ui() # Covered by refresh_all_classroom_displays
-            # if hasattr(self, 'refresh_student_list_ui'): self.refresh_student_list_ui() # Covered
-            # if hasattr(self, 'refresh_leader_selector_combo'): self.refresh_leader_selector_combo() # Covered
+            self.clear_user_form_ui(clear_selection=False)
             self.refresh_all_classroom_displays()
         else:
             messagebox.showerror("Error de Base de Datos", f"Error al añadir usuario '{name}'. Revisa la consola para más detalles.") # Translated
@@ -1194,7 +1219,7 @@ class App(ctk.CTk):
 
         user_id = self.selected_user_id_manage_tab
         new_name = self.um_name_entry.get().strip()
-        new_classroom = self.um_classroom_combo.get().strip()
+        new_classroom_stripped = self.um_classroom_combo.get().strip() # Strip here
         new_role_spanish = self.um_role_combo.get() # This is the Spanish role from the combobox
 
         if not new_name:
@@ -1202,7 +1227,7 @@ class App(ctk.CTk):
             self.um_name_entry.focus()
             return
 
-        if not new_classroom or new_classroom == "N/A": # Basic validation for classroom
+        if not new_classroom_stripped or new_classroom_stripped == "N/A":
             messagebox.showerror("Error de Entrada", "Por favor, seleccione o introduzca un nombre de clase/oficina válido para la actualización.")
             return
 
