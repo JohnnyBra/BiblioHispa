@@ -32,6 +32,24 @@ class App(ctk.CTk):
         self.title("📚 Gestor de Biblioteca Escolar 🧸") # Translated
         self.geometry("950x750")
 
+        # Set window icon
+        try:
+            # Ensure get_data_path and os are available in this scope
+            # get_data_path is imported from utils, os is imported directly
+            icon_path_str = os.path.join("assets", "logo.ico")
+            icon_path = get_data_path(icon_path_str) # Corrected: use icon_path_str here
+            if os.path.exists(icon_path):
+                self.iconbitmap(icon_path)
+            else:
+                # Try a fallback path if not found (e.g. if get_data_path points inside app dir already)
+                fallback_icon_path = os.path.join("assets", "logo.ico")
+                if os.path.exists(fallback_icon_path):
+                    self.iconbitmap(fallback_icon_path)
+                else:
+                    print(f"Warning: Window icon 'logo.ico' not found at {icon_path} (resolved from {icon_path_str}) or {fallback_icon_path}")
+        except Exception as e:
+            print(f"Error setting window icon: {e}")
+
         # Initialize database
         init_db() # Ensure DB is set up early
 
@@ -452,7 +470,7 @@ class App(ctk.CTk):
         self.student_role_combo.set("alumno") # Translated
         add_student_frame.columnconfigure(1, weight=1)
 
-        add_student_icon = self.load_icon("add_student")
+        add_student_icon = self.load_icon("students")
         add_student_button = ctk.CTkButton(add_student_frame, text="Añadir Alumno", image=add_student_icon, font=BUTTON_FONT, command=self.add_student_ui, corner_radius=8) # Translated
         add_student_button.grid(row=4, column=0, columnspan=2, pady=15, padx=10, sticky="ew")
 
@@ -574,7 +592,7 @@ class App(ctk.CTk):
         # self.due_date_entry.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
         lend_frame.columnconfigure(1, weight=1)
 
-        lend_icon = self.load_icon("lend_book")
+        lend_icon = self.load_icon("book_alt")
         # Storing the button in an instance variable self.lend_book_button
         self.lend_book_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
         self.lend_book_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Adjusted row from 4 to 3
@@ -593,11 +611,11 @@ class App(ctk.CTk):
         self.worksheet_submitted_checkbox.configure(state="disabled")
         self.worksheet_submitted_checkbox.grid(row=2, column=0, columnspan=2, padx=5, pady=(5,5), sticky="w")
 
-        return_icon = self.load_icon("return_book")
+        return_icon = self.load_icon("home")
         return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Translated
         return_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Shifted to row 3
 
-        extend_loan_icon = self.load_icon("extend_loan")
+        extend_loan_icon = self.load_icon("refresh")
         self.extend_loan_button = ctk.CTkButton(return_frame, text="Extender Préstamo", image=extend_loan_icon, font=BUTTON_FONT, state="disabled", corner_radius=8, command=self.extend_loan_ui)
         self.extend_loan_button.grid(row=4, column=0, columnspan=2, pady=(5,15), sticky="ew") # Shifted to row 4
 
@@ -1074,11 +1092,11 @@ class App(ctk.CTk):
         actions_frame.pack(pady=10, padx=10, fill="x")
         ctk.CTkLabel(actions_frame, text="Acciones para Usuario Seleccionado:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10) # Translated
 
-        delete_icon = self.load_icon("delete")
+        delete_icon = self.load_icon("close")
         self.um_delete_button = ctk.CTkButton(actions_frame, text="Eliminar", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8) # Translated
         self.um_delete_button.pack(side="left", padx=5, pady=10)
 
-        reset_pass_icon = self.load_icon("reset_password")
+        reset_pass_icon = self.load_icon("refresh")
         self.um_reset_password_button = ctk.CTkButton(actions_frame, text="Restablecer Contraseña", image=reset_pass_icon, font=BUTTON_FONT, command=self.reset_user_password_ui, state="disabled", corner_radius=8) # Translated
         self.um_reset_password_button.pack(side="left", padx=5, pady=10)
 
@@ -1667,7 +1685,7 @@ class App(ctk.CTk):
             no_data_label.pack(pady=20)
             return
 
-        entry_icon = self.load_icon("leaderboard_entry") # Generic icon for entries
+        entry_icon = self.load_icon("students") # Generic icon for entries
 
         for i, student in enumerate(students_data):
             rank = i + 1
