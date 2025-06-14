@@ -337,9 +337,9 @@ def return_book_db(loan_id, student_leader_id, worksheet_submitted=False):
         if conn:
             conn.close()
 
-def get_current_loans_db(ubicacion_filter=None):
+def get_current_loans_db(student_id_filter=None, ubicacion_filter=None):
     """Fetches current loans, joining with books and students tables.
-    Filters by books.ubicacion if ubicacion_filter is provided.
+    Filters by student_id (exact match) and/or books.ubicacion (exact match).
     Returns list of dicts (loan info + book info + borrower_name)."""
     conn = None
     try:
@@ -356,14 +356,22 @@ def get_current_loans_db(ubicacion_filter=None):
             JOIN students s ON l.student_id = s.id
         """
         params = []
+        conditions = []
 
-        if ubicacion_filter and ubicacion_filter != "All":
-            query += " WHERE b.ubicacion = ?"
+        if student_id_filter:
+            conditions.append("l.student_id = ?")
+            params.append(student_id_filter)
+
+        if ubicacion_filter and ubicacion_filter != "All": # "All" means no filter for ubicacion
+            conditions.append("b.ubicacion = ?")
             params.append(ubicacion_filter)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
 
         query += " ORDER BY l.due_date ASC"
 
-        cursor.execute(query, params)
+        cursor.execute(query, tuple(params))
         loans = [dict(row) for row in cursor.fetchall()]
         return loans
     except sqlite3.Error as e:
@@ -547,4 +555,51 @@ if __name__ == '__main__':
     # Loan management functions below this point are not yet updated for the new schema
     # and will likely not work correctly. They are preserved as placeholders for future refactoring.
     # ... (original __main__ content for loan tests would be here, but needs significant changes) ...
+
+    print("\n--- Testing get_current_loans_db with filters ---")
+    # To test this properly, we would need to:
+    # 1. Ensure some students exist (student_manager.add_student_db)
+    # 2. Ensure some books exist (add_book_db)
+    # 3. Create some loans (loan_book_db)
+
+    # Example (conceptual, actual IDs would vary):
+    # student_id_for_filter_test = student_manager.add_student_db("LoanFilterTester", "TestClass", "testpass")
+    # book_id_for_loan_test1 = add_book_db("Loan Test Book 1", "Author", "TestClass", cantidad_total=1)
+    # book_id_for_loan_test2 = add_book_db("Loan Test Book 2", "Author", "AnotherClass", cantidad_total=1)
+
+    # if student_id_for_filter_test and book_id_for_loan_test1 and book_id_for_loan_test2:
+    #     print(f"Test student ID: {student_id_for_filter_test}")
+    #     # Loan one book to this student in TestClass
+    #     loan_book_db(book_id_for_loan_test1, student_id_for_filter_test, "2024-12-31", "some_leader_id_if_needed_by_loan_book")
+    #     # Loan another book (in AnotherClass) to a different student (or same, if logic allows)
+    #     # For simplicity, let's assume another student exists or we add one
+    #     other_student_id = student_manager.add_student_db("OtherLoanTester", "AnotherClass", "testpass")
+    #     if other_student_id:
+    #         loan_book_db(book_id_for_loan_test2, other_student_id, "2024-12-31", "some_leader_id")
+
+    #     print("\nLoans for specific student:")
+    #     loans_student_specific = get_current_loans_db(student_id_filter=student_id_for_filter_test)
+    #     for loan in loans_student_specific:
+    #         print(f"  Loan ID: {loan['loan_id']}, Book: {loan['titulo']}, Borrower: {loan['borrower_name']}")
+    #     print(f"  Count: {len(loans_student_specific)}")
+
+    #     print("\nLoans for specific ubicacion ('TestClass'):")
+    #     loans_ubicacion_specific = get_current_loans_db(ubicacion_filter="TestClass")
+    #     for loan in loans_ubicacion_specific:
+    #         print(f"  Loan ID: {loan['loan_id']}, Book: {loan['titulo']}, Ubicacion: {loan['ubicacion']}")
+    #     print(f"  Count: {len(loans_ubicacion_specific)}")
+
+    #     print("\nLoans for specific student AND ubicacion:")
+    #     loans_both_filters = get_current_loans_db(student_id_filter=student_id_for_filter_test, ubicacion_filter="TestClass")
+    #     for loan in loans_both_filters:
+    #         print(f"  Loan ID: {loan['loan_id']}, Book: {loan['titulo']}, Student: {loan['borrower_name']}, Ubicacion: {loan['ubicacion']}")
+    #     print(f"  Count: {len(loans_both_filters)}")
+
+    #     print("\nAll current loans (no filters):")
+    #     all_loans_for_test = get_current_loans_db()
+    #     print(f"  Total loans: {len(all_loans_for_test)}")
+
+    # else:
+    #     print("Could not create test students/books for loan filter tests.")
+
     pass # Keep the if __name__ == '__main__': block for future direct script testing if needed
