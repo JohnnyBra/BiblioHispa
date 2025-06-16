@@ -335,48 +335,40 @@ class App(ctk.CTk):
                                       font=BUTTON_FONT, command=self.import_csv_ui, corner_radius=8)  # Translated
         import_button.pack(pady=10, padx=60, fill="x")
 
-    def add_book_ui(self):
-    titulo = self.title_entry.get()
-    autor = self.author_entry.get()
-    genero = self.genero_entry.get()  # New field
-    ubicacion = self.ubicacion_combobox.get()  # Renamed, was classroom
-    cantidad_total_str = self.cantidad_total_entry.get()
+def add_book_ui(self):
+        titulo = self.title_entry.get()
+        autor = self.author_entry.get()
+        genero = self.genero_entry.get() # New field
+        ubicacion = self.ubicacion_combobox.get() # Renamed, was classroom
+        cantidad_total_str = self.cantidad_total_entry.get()
 
-    if not titulo or not autor or not ubicacion or not cantidad_total_str:
-    messagebox.showerror(
-        "¡Un momento! 🚧", "¡Uy! Título, Autor, Ubicación y Cantidad Total son necesarios.")  # Translated
-    return
+        if not titulo or not autor or not ubicacion or not cantidad_total_str:
+            messagebox.showerror("¡Un momento! 🚧", "¡Uy! Título, Autor, Ubicación y Cantidad Total son necesarios.") # Translated
+            return
 
-    try:
-    cantidad_total = int(cantidad_total_str)
-    if cantidad_total <= 0:
-    messagebox.showerror(
-        "Error de Entrada", "La Cantidad Total debe ser un número positivo.")  # Translated
-    return
-    except ValueError:
-    messagebox.showerror(
-        "Error de Entrada", "La Cantidad Total debe ser un número válido.")  # Translated
-    return
+        try:
+            cantidad_total = int(cantidad_total_str)
+        if cantidad_total <= 0:
+            messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número positivo.") # Translated
+            return
+        except ValueError:
+            messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número válido.") # Translated
+            return
 
-    # Assuming book_manager.add_book_db signature is (titulo, autor, ubicacion, genero=None, cantidad_total=1)
-    book_id = book_manager.add_book_db(
-        titulo, autor, ubicacion, genero if genero else None, cantidad_total)
+        # Assuming book_manager.add_book_db signature is (titulo, autor, ubicacion, genero=None, cantidad_total=1)
+        book_id = book_manager.add_book_db(titulo, autor, ubicacion, genero if genero else None, cantidad_total)
 
-    if book_id:
-    messagebox.showinfo(
-        "¡Éxito! 🎉", f"¡Excelente! El libro '{titulo}' ha sido añadido correctamente.")  # Translated
-    self.title_entry.delete(0, "end")
-    self.author_entry.delete(0, "end")
-    self.genero_entry.delete(0, "end")
-    # self.ubicacion_combobox.set("Salón A") # Reset to default or clear
-    self.cantidad_total_entry.delete(0, "end")
-    if hasattr(self, 'refresh_book_list_ui'):
-        self.refresh_book_list_ui()
-    if hasattr(self, 'refresh_loan_related_combos_and_lists'):
-        self.refresh_loan_related_combos_and_lists()
-    else:
-    messagebox.showerror(
-        "¡Oh no! 😟", "Algo salió mal al añadir el libro.")  # Translated
+        if book_id:
+        messagebox.showinfo("¡Éxito! 🎉", f"¡Excelente! El libro '{titulo}' ha sido añadido correctamente.") # Translated
+            self.title_entry.delete(0, "end")
+        self.author_entry.delete(0, "end")
+        self.genero_entry.delete(0, "end")
+        # self.ubicacion_combobox.set("Salón A") # Reset to default or clear
+        self.cantidad_total_entry.delete(0, "end")
+        if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
+        if hasattr(self, 'refresh_loan_related_combos_and_lists'): self.refresh_loan_related_combos_and_lists()
+        else:
+            messagebox.showerror("¡Oh no! 😟", "Algo salió mal al añadir el libro.") # Translated
 
     def import_csv_ui(self):  # Re-implemented
     file_path = filedialog.askopenfilename(
