@@ -240,9 +240,7 @@ class App(ctk.CTk):
 
 
         if hasattr(self, 'refresh_loan_related_combos_and_lists'):
-
-
-        self.refresh_loan_related_combos_and_lists()
+            self.refresh_loan_related_combos_and_lists()
 
 
 
