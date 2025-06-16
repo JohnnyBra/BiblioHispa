@@ -215,7 +215,7 @@ class App(ctk.CTk):
         if not self.current_leader_id:
 
 
-        messagebox.showwarning("Líder No Seleccionado",
+            messagebox.showwarning("Líder No Seleccionado",
 
 
         "Por favor, seleccione un líder estudiantil en la pestaña 'Gestionar Préstamos' antes de intentar prestar un libro desde aquí.")
@@ -873,8 +873,8 @@ class App(ctk.CTk):
 
         def lend_book_ui(self):
         if not self.current_leader_id:
-        messagebox.showerror("Líder No Seleccionado", "Por favor, seleccione primero un líder estudiantil.") # Translated
-        return
+            messagebox.showerror("Líder No Seleccionado", "Por favor, seleccione primero un líder estudiantil.") # Translated
+            return
 
         book_display_name = self.lend_book_combo.get()
         borrower_display_name = self.borrower_combo.get()
@@ -906,8 +906,8 @@ class App(ctk.CTk):
 
         def return_book_ui(self):
         if not self.current_leader_id:
-        messagebox.showerror("Líder No Seleccionado", "Por favor, seleccione primero un líder estudiantil.") # Translated
-        return
+            messagebox.showerror("Líder No Seleccionado", "Por favor, seleccione primero un líder estudiantil.") # Translated
+            return
 
         return_loan_display_name = self.return_book_combo.get()
         if return_loan_display_name == "No borrowed books":
