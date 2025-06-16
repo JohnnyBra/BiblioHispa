@@ -280,9 +280,9 @@ class App(ctk.CTk):
         dropdown_font=BODY_FONT)
         self.ubicacion_combobox.grid(row=4, column=1, padx=10, pady=8, sticky="ew")
         if all_ubicaciones:
-        self.ubicacion_combobox.set(all_ubicaciones[0])
+            self.ubicacion_combobox.set(all_ubicaciones[0])
         else:
-        self.ubicacion_combobox.set("N/A")
+            self.ubicacion_combobox.set("N/A")
 
         ctk.CTkLabel(add_book_frame, text="Cantidad Total:", font=BODY_FONT).grid(row=5, column=0, padx=10, pady=8, sticky="w")
         self.cantidad_total_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., 1") # Translated
