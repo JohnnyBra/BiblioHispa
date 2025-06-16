@@ -57,7 +57,8 @@ class App(ctk.CTk):
         self.current_leader_classroom = None
         self.selected_user_id_manage_tab = None
         self.icon_cache = {}
-        self.login_window = None # Placeholder for the login window
+        self.login_window = None
+        self.book_id_to_preselect_on_loan_tab = None # Placeholder for the login window
 
         self.withdraw() # Hide main window initially
         self.show_login_screen() # Show login screen first
@@ -205,6 +206,44 @@ class App(ctk.CTk):
             except Exception as pe: # Placeholder creation error
                 print(f"Critical error: Could not create placeholder icon for {icon_name}: {pe}")
                 return None
+def go_to_lend_tab_with_book(self, book_id):
+
+
+            # Check if a leader is selected, as Manage Loans tab requires it.
+
+
+            if not self.current_leader_id:
+
+
+                messagebox.showwarning("Líder No Seleccionado",
+
+
+                                       "Por favor, seleccione un líder estudiantil en la pestaña 'Gestionar Préstamos' antes de intentar prestar un libro desde aquí.")
+
+
+                self.tab_view.set("🔄 Gestionar Préstamos")
+
+
+                return
+
+
+
+
+
+            self.book_id_to_preselect_on_loan_tab = book_id
+
+
+            self.tab_view.set("🔄 Gestionar Préstamos")
+
+
+
+
+
+            if hasattr(self, 'refresh_loan_related_combos_and_lists'):
+
+
+                 self.refresh_loan_related_combos_and_lists()
+
 
 
     def setup_manage_books_tab(self):
@@ -395,13 +434,13 @@ class App(ctk.CTk):
             availability_color = "green" if available_count > 0 else "red"
 
             status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(APP_FONT_FAMILY, 11, "bold"), text_color=availability_color, anchor="e")
-            status_label.grid(row=0, column=2, padx=(5,10), pady=(5,0), sticky="ne")
+            status_label.grid(row=0, column=1, padx=(5,10), pady=(5,0), sticky="ne")
 
             title_label = ctk.CTkLabel(book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
-            title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=(5,2), sticky="w")
+            title_label.grid(row=0, column=0, padx=10, pady=(5,2), sticky="w")
 
             author_label = ctk.CTkLabel(book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 11, "italic"), anchor="w")
-            author_label.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky="w")
+            author_label.grid(row=1, column=0, columnspan=3, padx=10, pady=(0,5), sticky="w")
 
             info_text = f"Ubicación: {book.get('ubicacion', 'N/A')}"
             if book.get('genero'):
@@ -788,6 +827,46 @@ class App(ctk.CTk):
             self.return_book_combo.set(return_book_display_names[0])
 
         self.on_return_book_selection_change(self.return_book_combo.get())
+
+        if hasattr(self, 'book_id_to_preselect_on_loan_tab') and self.book_id_to_preselect_on_loan_tab:
+
+            book_to_select_id = self.book_id_to_preselect_on_loan_tab
+
+            self.book_id_to_preselect_on_loan_tab = None # Clear after use
+
+
+
+            selected_book_display_name = None
+
+            # Iterate over a copy of items if lend_book_map might be modified, though it shouldn't here.
+
+            for display_name, book_id_val in list(self.lend_book_map.items()):
+
+                if book_id_val == book_to_select_id:
+
+                    selected_book_display_name = display_name
+
+                    break
+
+
+
+            if selected_book_display_name and hasattr(self, 'lend_book_combo'):
+
+                current_combo_values = self.lend_book_combo.cget("values")
+
+                if isinstance(current_combo_values, list) and selected_book_display_name in current_combo_values:
+
+                    self.lend_book_combo.set(selected_book_display_name)
+
+                    print(f"Book '{selected_book_display_name}' pre-selected.")
+
+                else:
+
+                    print(f"Book '{selected_book_display_name}' (ID: {book_to_select_id}) not in lend_book_combo values: {current_combo_values[:5]}... Cannot pre-select.")
+
+            elif hasattr(self, 'lend_book_combo'):
+
+                print(f"Book ID {book_to_select_id} not found in lend_book_map or lend_book_combo not available. Cannot pre-select.")
 
         self.refresh_current_loans_list()
         self.refresh_reminders_list()
