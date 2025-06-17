@@ -359,14 +359,16 @@ def add_book_ui(self):
         book_id = book_manager.add_book_db(titulo, autor, ubicacion, genero if genero else None, cantidad_total)
 
         if book_id:
-        messagebox.showinfo("¡Éxito! 🎉", f"¡Excelente! El libro '{titulo}' ha sido añadido correctamente.") # Translated
+            messagebox.showinfo("¡Éxito! 🎉", f"¡Excelente! El libro '{titulo}' ha sido añadido correctamente.") # Translated
             self.title_entry.delete(0, "end")
-        self.author_entry.delete(0, "end")
-        self.genero_entry.delete(0, "end")
-        # self.ubicacion_combobox.set("Salón A") # Reset to default or clear
-        self.cantidad_total_entry.delete(0, "end")
-        if hasattr(self, 'refresh_book_list_ui'): self.refresh_book_list_ui()
-        if hasattr(self, 'refresh_loan_related_combos_and_lists'): self.refresh_loan_related_combos_and_lists()
+            self.author_entry.delete(0, "end")
+            self.genero_entry.delete(0, "end")
+            # self.ubicacion_combobox.set("Salón A") # Reset to default or clear
+            self.cantidad_total_entry.delete(0, "end")
+            if hasattr(self, 'refresh_book_list_ui'):
+                self.refresh_book_list_ui()
+            if hasattr(self, 'refresh_loan_related_combos_and_lists'):
+                self.refresh_loan_related_combos_and_lists()
         else:
             messagebox.showerror("¡Oh no! 😟", "Algo salió mal al añadir el libro.") # Translated
 
