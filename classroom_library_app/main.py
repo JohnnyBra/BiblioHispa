@@ -352,113 +352,99 @@ class App(ctk.CTk):
             self.refresh_book_list_ui()
         if hasattr(self, 'refresh_loan_related_combos_and_lists'):
             self.refresh_loan_related_combos_and_lists()
+def setup_view_books_tab(self):
+        tab = self.view_books_tab
+        tab.configure(fg_color=("#E6F0FA", "#2B2B2B"))
+        controls_frame = ctk.CTkFrame(tab, corner_radius=10)
+        controls_frame.pack(pady=15, padx=15, fill="x")
+        ctk.CTkLabel(controls_frame, text="Filtrar por Ubicación:", font=BODY_FONT).grid(
+            row=0, column=0, padx=(10, 5), pady=10, sticky="w")
+        self.view_ubicacion_filter = ctk.CTkComboBox(controls_frame, values=["Todos", "Salón A", "Salón B", "Salón C", "Biblioteca"], command=lambda x: self.refresh_book_list_ui(
+        ), font=BODY_FONT, dropdown_font=BODY_FONT, width=150)  # Translated "All"
+        self.view_ubicacion_filter.grid(row=0, column=1, padx=5, pady=10)
+        self.view_ubicacion_filter.set("Todos")  # Translated "All"
 
-    def setup_view_books_tab(self):
-    tab = self.view_books_tab
-    tab.configure(fg_color=("#E6F0FA", "#2B2B2B"))
-    controls_frame = ctk.CTkFrame(tab, corner_radius=10)
-    controls_frame.pack(pady=15, padx=15, fill="x")
-    ctk.CTkLabel(controls_frame, text="Filtrar por Ubicación:", font=BODY_FONT).grid(
-        row=0, column=0, padx=(10, 5), pady=10, sticky="w")
-    self.view_ubicacion_filter = ctk.CTkComboBox(controls_frame, values=["Todos", "Salón A", "Salón B", "Salón C", "Biblioteca"], command=lambda x: self.refresh_book_list_ui(
-    ), font=BODY_FONT, dropdown_font=BODY_FONT, width=150)  # Translated "All"
-    self.view_ubicacion_filter.grid(row=0, column=1, padx=5, pady=10)
-    self.view_ubicacion_filter.set("Todos")  # Translated "All"
-    # Status filter removed
-    # ctk.CTkLabel(controls_frame, text="Filter by Status:", font=BODY_FONT).grid(row=0, column=2, padx=(10,5), pady=10, sticky="w")
-    # self.view_status_filter = ctk.CTkComboBox(controls_frame, values=["All", "available", "borrowed"], command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150)
-    # self.view_status_filter.grid(row=0, column=3, padx=5, pady=10)
-    # self.view_status_filter.set("All")
-    # Allow combobox to take some space (adjust column index if needed)
-    controls_frame.columnconfigure(1, weight=1)
-    search_frame = ctk.CTkFrame(tab, corner_radius=10)
-    search_frame.pack(pady=(0, 15), padx=15, fill="x")
-    ctk.CTkLabel(search_frame, text="🔍 Buscar Libros:", font=SUBHEADING_FONT).pack(
-        side="left", padx=(10, 10), pady=10)  # Translated
-    self.search_entry = ctk.CTkEntry(
-        search_frame, placeholder_text="Escribe para buscar por título o autor...", font=BODY_FONT, width=300)  # Translated
-    self.search_entry.pack(side="left", padx=(
-        0, 10), pady=10, expand=True, fill="x")
-    search_icon = self.load_icon("search")
-    search_button = ctk.CTkButton(search_frame, text="Buscar", image=search_icon, font=BUTTON_FONT,
-                                  command=self.search_books_ui, width=100, corner_radius=8)  # Translated
-    search_button.pack(side="left", padx=(0, 5), pady=10)
-    clear_search_icon = self.load_icon("clear_search")
-    clear_search_button = ctk.CTkButton(search_frame, text="Limpiar", image=clear_search_icon, font=BUTTON_FONT,
-                                        command=self.clear_search_ui, width=80, corner_radius=8, fg_color="gray50", hover_color="gray60")  # Translated
-    clear_search_button.pack(side="left", padx=(0, 10), pady=10)
-    self.book_list_frame = ctk.CTkScrollableFrame(
-        tab, label_text="Nuestra Maravillosa Colección de Libros", label_font=HEADING_FONT, corner_radius=10)  # Translated
-    self.book_list_frame.pack(expand=True, fill="both", padx=15, pady=(0, 15))
-    self.refresh_book_list_ui()
+        controls_frame.columnconfigure(1, weight=1)
+        search_frame = ctk.CTkFrame(tab, corner_radius=10)
+        search_frame.pack(pady=(0, 15), padx=15, fill="x")
+        ctk.CTkLabel(search_frame, text="🔍 Buscar Libros:", font=SUBHEADING_FONT).pack(
+            side="left", padx=(10, 10), pady=10)  # Translated
+        self.search_entry = ctk.CTkEntry(
+            search_frame, placeholder_text="Escribe para buscar por título o autor...", font=BODY_FONT, width=300)  # Translated
+        self.search_entry.pack(side="left", padx=(
+            0, 10), pady=10, expand=True, fill="x")
+        search_icon = self.load_icon("search")
+        search_button = ctk.CTkButton(search_frame, text="Buscar", image=search_icon, font=BUTTON_FONT,
+                                      command=self.search_books_ui, width=100, corner_radius=8)  # Translated
+        search_button.pack(side="left", padx=(0, 5), pady=10)
+        clear_search_icon = self.load_icon("clear_search")
+        clear_search_button = ctk.CTkButton(search_frame, text="Limpiar", image=clear_search_icon, font=BUTTON_FONT,
+                                            command=self.clear_search_ui, width=80, corner_radius=8, fg_color="gray50", hover_color="gray60")  # Translated
+        clear_search_button.pack(side="left", padx=(0, 10), pady=10)
+        self.book_list_frame = ctk.CTkScrollableFrame(
+            tab, label_text="Nuestra Maravillosa Colección de Libros", label_font=HEADING_FONT, corner_radius=10)  # Translated
+        self.book_list_frame.pack(expand=True, fill="both", padx=15, pady=(0, 15))
+        self.refresh_book_list_ui()
+
     def refresh_book_list_ui(self, books_to_display=None):
-    for widget in self.book_list_frame.winfo_children():
-    widget.destroy()
-    ubicacion_val = self.view_ubicacion_filter.get() if hasattr(
-        self, 'view_ubicacion_filter') else "Todos"  # Changed variable name and default
-    if books_to_display is None:
-    books = book_manager.get_all_books_db(
-        # Changed "All" to "Todos"
-        ubicacion_filter=ubicacion_val if ubicacion_val != "Todos" else None
-    )
-    else:
-    books = books_to_display
-    if not books:
-    no_books_label = ctk.CTkLabel(
-        self.book_list_frame, text="No se encontraron libros. Intenta cambiar los filtros o añadir nuevos libros.", font=BODY_FONT)  # Translated
-    no_books_label.pack(pady=30, padx=10)
-    return
-    for i, book in enumerate(books):
-    book_item_frame = ctk.CTkFrame(
-        self.book_list_frame, corner_radius=6, border_width=1, border_color=("gray75", "gray30"))
-    book_item_frame.pack(fill="x", pady=8, padx=8)
-    book_item_frame.columnconfigure(1, weight=1)
-    available_count = book_manager.get_available_book_count(book['id'])
-    total_count = book.get('cantidad_total', 0)
-    availability_text = f"Disponible: {available_count} / {total_count}"
-    availability_color = "green" if available_count > 0 else "red"
-    status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(
-        APP_FONT_FAMILY, 11, "bold"), text_color=availability_color, anchor="e")
-    status_label.grid(row=0, column=1, padx=(5, 10), pady=(5, 0), sticky="ne")
-    title_label = ctk.CTkLabel(
-        book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
-    title_label.grid(row=0, column=0, padx=10, pady=(5, 2), sticky="w")
-    author_label = ctk.CTkLabel(
-        book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 11, "italic"), anchor="w")
-    author_label.grid(row=1, column=0, columnspan=3,
-                      padx=10, pady=(0, 5), sticky="w")
-    info_text = f"Ubicación: {book.get('ubicacion', 'N/A')}"
-    if book.get('genero'):
-    info_text += f"  |  Género: {book.get('genero')}"
-    info_label = ctk.CTkLabel(book_item_frame, text=info_text, font=(
-        APP_FONT_FAMILY, 10), anchor="w")
-    info_label.grid(row=2, column=0, columnspan=3,
-                    padx=10, pady=(0, 8), sticky="w")
-    # Removed image_path display for now as it's not in the new schema
+        for widget in self.book_list_frame.winfo_children():
+            widget.destroy()
+        ubicacion_val = self.view_ubicacion_filter.get() if hasattr(
+            self, 'view_ubicacion_filter') else "Todos"  # Changed variable name and default
+        if books_to_display is None:
+            books = book_manager.get_all_books_db(
+                # Changed "All" to "Todos"
+                ubicacion_filter=ubicacion_val if ubicacion_val != "Todos" else None
+            )
+        else:
+            books = books_to_display
+        if not books:
+            no_books_label = ctk.CTkLabel(
+                self.book_list_frame, text="No se encontraron libros. Intenta cambiar los filtros o añadir nuevos libros.", font=BODY_FONT)  # Translated
+            no_books_label.pack(pady=30, padx=10)
+            return
+        for i, book in enumerate(books):
+            book_item_frame = ctk.CTkFrame(
+                self.book_list_frame, corner_radius=6, border_width=1, border_color=("gray75", "gray30"))
+            book_item_frame.pack(fill="x", pady=8, padx=8)
+            book_item_frame.columnconfigure(1, weight=1)
+            available_count = book_manager.get_available_book_count(book['id'])
+            total_count = book.get('cantidad_total', 0)
+            availability_text = f"Disponible: {available_count} / {total_count}"
+            availability_color = "green" if available_count > 0 else "red"
+            status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(
+                APP_FONT_FAMILY, 11, "bold"), text_color=availability_color, anchor="e")
+            status_label.grid(row=0, column=1, padx=(5, 10), pady=(5, 0), sticky="ne")
+            title_label = ctk.CTkLabel(
+                book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
+            title_label.grid(row=0, column=0, padx=10, pady=(5, 2), sticky="w")
+            author_label = ctk.CTkLabel(
+                book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 11, "italic"), anchor="w")
+            author_label.grid(row=1, column=0, columnspan=3,
+                              padx=10, pady=(0, 5), sticky="w")
+            info_text = f"Ubicación: {book.get('ubicacion', 'N/A')}"
+            if book.get('genero'):
+                info_text += f"  |  Género: {book.get('genero')}"
+            info_label = ctk.CTkLabel(book_item_frame, text=info_text, font=(
+                APP_FONT_FAMILY, 10), anchor="w")
+            info_label.grid(row=2, column=0, columnspan=3,
+                            padx=10, pady=(0, 8), sticky="w")
+
     def search_books_ui(self):
-    query = self.search_entry.get()
-    if not query:
-    self.refresh_book_list_ui()  # Show all if query is empty
-    return
-    # Search by title and author, then combine results
-    # book_manager.search_books_db now defaults to "titulo" if field not specified
-    results_titulo = book_manager.search_books_db(query, search_field="titulo")
-    results_autor = book_manager.search_books_db(query, search_field="autor")
-    # Potentially search by genero and ubicacion as well if desired by product
-    # results_genero = book_manager.search_books_db(query, search_field="genero")
-    # results_ubicacion = book_manager.search_books_db(query, search_field="ubicacion")
-    # Combine results, avoiding duplicates
-    combined_results = {book['id']: book for book in results_titulo}
-    for book in results_autor:
-    combined_results[book['id']] = book
-    # for book in results_genero:
-    #     combined_results[book['id']] = book
-    # for book in results_ubicacion:
-    #     combined_results[book['id']] = book
-    self.refresh_book_list_ui(books_to_display=list(combined_results.values()))
+        query = self.search_entry.get()
+        if not query:
+            self.refresh_book_list_ui()  # Show all if query is empty
+            return
+        results_titulo = book_manager.search_books_db(query, search_field="titulo")
+        results_autor = book_manager.search_books_db(query, search_field="autor")
+        combined_results = {book['id']: book for book in results_titulo}
+        for book in results_autor:
+            combined_results[book['id']] = book
+        self.refresh_book_list_ui(books_to_display=list(combined_results.values()))
+
     def clear_search_ui(self):
-    self.search_entry.delete(0, "end")
-    self.refresh_book_list_ui()
+        self.search_entry.delete(0, "end")
+        self.refresh_book_list_ui()
     def setup_manage_students_tab(self):
     tab = self.manage_students_tab
     tab.configure(fg_color=("#FAF0E6", "#2E2B28"))
