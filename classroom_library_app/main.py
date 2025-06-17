@@ -373,33 +373,33 @@ def add_book_ui(self):
             messagebox.showerror("¡Oh no! 😟", "Algo salió mal al añadir el libro.") # Translated
 
     def import_csv_ui(self):  # Re-implemented
-    file_path = filedialog.askopenfilename(
-        title="Seleccionar archivo CSV para importar",  # Translated
-        filetypes=(("Archivos CSV", "*.csv"),
-                   ("Todos los archivos", "*.*"))  # Translated
-    )
-    if not file_path:
-    return
+        file_path = filedialog.askopenfilename(
+            title="Seleccionar archivo CSV para importar",  # Translated
+            filetypes=(("Archivos CSV", "*.csv"),
+                       ("Todos los archivos", "*.*"))  # Translated
+        )
+        if not file_path:
+            return
 
-    # The os.makedirs("assets") line was likely for a sample CSV, not needed for general import.
-    # If a specific assets folder for user-provided CSVs was intended, that's a different feature.
+        # The os.makedirs("assets") line was likely for a sample CSV, not needed for general import.
+        # If a specific assets folder for user-provided CSVs was intended, that's a different feature.
 
-    success_count, errors = book_manager.import_books_from_csv_db(file_path)
+        success_count, errors = book_manager.import_books_from_csv_db(file_path)
 
-    # Translated
-    summary_message = f"Resumen de Importación CSV:\n\nLibros importados con éxito: {success_count}."
-    if errors:
-    summary_message += "\n\nErrores encontrados:\n" + \
-        "\n".join(f"- {e}" for e in errors)
-    messagebox.showwarning(
-        "Importación Parcialmente Exitosa", summary_message)  # Translated
-    else:
-    messagebox.showinfo("Importación Exitosa", summary_message)  # Translated
+        # Translated
+        summary_message = f"Resumen de Importación CSV:\n\nLibros importados con éxito: {success_count}."
+        if errors:
+            summary_message += "\n\nErrores encontrados:\n" + \
+                "\n".join(f"- {e}" for e in errors)
+            messagebox.showwarning(
+                "Importación Parcialmente Exitosa", summary_message)  # Translated
+        else:
+            messagebox.showinfo("Importación Exitosa", summary_message)  # Translated
 
-    if hasattr(self, 'refresh_book_list_ui'):
-        self.refresh_book_list_ui()
-    if hasattr(self, 'refresh_loan_related_combos_and_lists'):
-        self.refresh_loan_related_combos_and_lists()
+        if hasattr(self, 'refresh_book_list_ui'):
+            self.refresh_book_list_ui()
+        if hasattr(self, 'refresh_loan_related_combos_and_lists'):
+            self.refresh_loan_related_combos_and_lists()
 
     def setup_view_books_tab(self):
     tab = self.view_books_tab
