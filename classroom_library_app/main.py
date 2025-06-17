@@ -348,9 +348,9 @@ def add_book_ui(self):
 
         try:
             cantidad_total = int(cantidad_total_str)
-        if cantidad_total <= 0:
-            messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número positivo.") # Translated
-            return
+            if cantidad_total <= 0:
+                messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número positivo.") # Translated
+                return
         except ValueError:
             messagebox.showerror("Error de Entrada", "La Cantidad Total debe ser un número válido.") # Translated
             return
