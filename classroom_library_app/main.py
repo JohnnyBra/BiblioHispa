@@ -68,8 +68,8 @@ class App(ctk.CTk):
             return
 
         self.login_window = ctk.CTkToplevel(self)
-        self.login_window.title("Creado por Javi Barrero") # Translated
-        self.login_window.geometry("450x650") # Adjusted window size
+        self.login_window.title("¡Hola Peque!") # Translated
+        self.login_window.geometry("450x600") # Adjusted window size
         self.login_window.transient(self)
         self.login_window.grab_set()
         self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application)
@@ -152,6 +152,18 @@ class App(ctk.CTk):
         # )
         # creator_label.pack(side="bottom", pady=(5, 5), fill="x", expand=False)
         # creator_label.lift() # Or creator_label.tkraise()
+
+        # Creator Label in a dedicated bottom frame
+        bottom_frame = ctk.CTkFrame(self.login_window, fg_color="transparent") # Make frame background transparent
+        bottom_frame.pack(side="bottom", fill="x", padx=10, pady=5) # Pack frame at the bottom
+
+        creator_label_on_frame = ctk.CTkLabel(
+            bottom_frame,
+            text="Creado por Javi Barrero",
+            font=BODY_FONT,
+            text_color=("black", "white")
+        )
+        creator_label_on_frame.pack(pady=5) # Pack label inside the bottom_frame
         # Center the login window
         self.login_window.update_idletasks() # Update geometry
         x = self.winfo_screenwidth() // 2 - self.login_window.winfo_width() // 2
