@@ -81,37 +81,37 @@ def import_books_from_csv_db(file_path):
                  error_messages.append("No se pudieron determinar ubicaciones válidas (clases o Biblioteca).")
                  return successful_imports, error_messages
             actual_headers_raw = reader.fieldnames
-                        if not actual_headers_raw:
-                            error_messages.append("El archivo CSV está vacío o no tiene encabezados.")
-                            return successful_imports, error_messages
-                        # Normalize actual headers (strip spaces, convert to lowercase for matching)
-                        actual_headers_normalized_map = {h.strip().lower(): h.strip() for h in actual_headers_raw}
-                        # Define canonical field names (lowercase) and their aliases (lowercase)
-                        expected_fields_with_aliases = {
-                            "título": ["título", "titulo"],
-                            "autor": ["autor"],
-                            "género": ["género", "genero", "género literario", "genero literario"],
-                            "ubicación": ["ubicación", "ubicacion", "clase"],
-                            "cantidad_total": ["cantidad_total", "cantidad total", "cantidad", "cantidad de ejemplares", "cantidad de ejemplares vistos", "num ejemplares", "no. ejemplares"]
-                        }
-                        found_header_map = {}
-                        missing_canonical_headers = []
-                        for canonical, aliases in expected_fields_with_aliases.items():
-                            found_alias = False
-                            for alias in aliases:
-                                if alias in actual_headers_normalized_map:
-                                    found_header_map[canonical] = actual_headers_normalized_map[alias] # Store the original casing from CSV
-                                    found_alias = True
-                                    break
-                            if not found_alias:
-                                missing_canonical_headers.append(canonical.capitalize())
-                        if missing_canonical_headers:
-                            error_messages.append(
-                                f"El archivo CSV no contiene los encabezados requeridos o sus variantes aceptadas: {', '.join(missing_canonical_headers)}. "
-                                f"Asegúrese de que el archivo tenga columnas correspondientes a Título, Autor, Género, Ubicación, Cantidad Total. "
-                                f"Encabezados encontrados en el CSV: {', '.join(actual_headers_raw)}"
-                            )
-                            return successful_imports, error_messages
+            if not actual_headers_raw:
+                error_messages.append("El archivo CSV está vacío o no tiene encabezados.")
+                return successful_imports, error_messages
+            # Normalize actual headers (strip spaces, convert to lowercase for matching)
+            actual_headers_normalized_map = {h.strip().lower(): h.strip() for h in actual_headers_raw}
+            # Define canonical field names (lowercase) and their aliases (lowercase)
+            expected_fields_with_aliases = {
+                "título": ["título", "titulo"],
+                "autor": ["autor"],
+                "género": ["género", "genero", "género literario", "genero literario"],
+                "ubicación": ["ubicación", "ubicacion", "clase"],
+                "cantidad_total": ["cantidad_total", "cantidad total", "cantidad", "cantidad de ejemplares", "cantidad de ejemplares vistos", "num ejemplares", "no. ejemplares"]
+            }
+            found_header_map = {}
+            missing_canonical_headers = []
+            for canonical, aliases in expected_fields_with_aliases.items():
+                found_alias = False
+                for alias in aliases:
+                    if alias in actual_headers_normalized_map:
+                        found_header_map[canonical] = actual_headers_normalized_map[alias] # Store the original casing from CSV
+                        found_alias = True
+                        break
+                if not found_alias:
+                    missing_canonical_headers.append(canonical.capitalize())
+            if missing_canonical_headers:
+                error_messages.append(
+                    f"El archivo CSV no contiene los encabezados requeridos o sus variantes aceptadas: {', '.join(missing_canonical_headers)}. "
+                    f"Asegúrese de que el archivo tenga columnas correspondientes a Título, Autor, Género, Ubicación, Cantidad Total. "
+                    f"Encabezados encontrados en el CSV: {', '.join(actual_headers_raw)}"
+                )
+                return successful_imports, error_messages
             for row_num, row in enumerate(reader, start=2):
                 titulo = row.get(found_header_map["título"])
                 autor = row.get(found_header_map["autor"])

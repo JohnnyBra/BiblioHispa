@@ -1509,7 +1509,7 @@ class App(ctk.CTk):
             elif general_classroom_list[0] != "(N/A)":
                 self.import_csv_classroom_combo.set(general_classroom_list[0])
             else:
-                 self.import_csv_classroom_combo.set(general_classroom_list[0]) # Sets to "(N/A)"
+                self.import_csv_classroom_combo.set(general_classroom_list[0]) # Sets to "(N/A)"
 
         # 4. Refresh classroom combobox in "Gestionar Usuarios" (user editing)
         um_classroom_list_with_admin = sorted(list(set(updated_classrooms + ["OficinaAdmin"])))
@@ -1564,7 +1564,7 @@ class App(ctk.CTk):
             if current_view_ubicacion in view_books_options:
                 self.view_ubicacion_filter.set(current_view_ubicacion)
             elif "Todos" in view_books_options:
-                 self.view_ubicacion_filter.set("Todos")
+                self.view_ubicacion_filter.set("Todos")
             elif view_books_options:
                 self.view_ubicacion_filter.set(view_books_options[0])
 
