@@ -157,7 +157,8 @@
     "button_hover_color": [
       "#E53935",
       "#E53935"
-    ]
+    ],
+    "corner_radius": 8
   },
   "CTkScrollableFrame": {
     "label_fg_color": [
