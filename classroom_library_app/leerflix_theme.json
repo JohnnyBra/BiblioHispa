@@ -58,8 +58,7 @@
     "text_color": [
       "#202020",
       "#E0E0E0"
-    ],
-    "font": ["Arial", 12, "normal"]
+    ]
   },
   "CTkEntry": {
     "corner_radius": 6,
