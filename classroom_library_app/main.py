@@ -69,15 +69,41 @@ class App(ctk.CTk):
 
         self.login_window = ctk.CTkToplevel(self)
         self.login_window.title("¡Hola Peque!") # Translated
-        self.login_window.geometry("450x350") # Adjusted window size
+        self.login_window.geometry("450x550") # Adjusted window size
         self.login_window.transient(self)
         self.login_window.grab_set()
         self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application)
 
-        ctk.CTkLabel(self.login_window, text="¡Bienvenido/a a Biblio Diversión!", font=HEADING_FONT).pack(pady=20) # Translated
+        # Load and display the image
+        try:
+            image_path_str = os.path.join('assets', 'Leerflix igual.jpg')
+            image_path = get_data_path(image_path_str)
+            if os.path.exists(image_path):
+                img = Image.open(image_path)
+                # Adjust size as needed, maintaining aspect ratio if possible
+                # Original image dimensions might be large, so we scale it down.
+                # Let's aim for a width of 400, and scale height accordingly, or set a fixed size.
+                # For example, if original is 1200x600, scaled could be 400x200.
+                # For now, using a fixed size, e.g. 400x150, adjust as needed.
+                desired_width = 400
+                desired_height = 150 # Adjust this based on actual image aspect ratio
+                img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
+                ctk_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
+                image_label = ctk.CTkLabel(self.login_window, image=ctk_image, text="")
+                image_label.pack(pady=(20, 10)) # Padding top and bottom
+            else:
+                print(f"Login screen image not found at {image_path}")
+                # Optionally, add a placeholder label if image is missing
+                ctk.CTkLabel(self.login_window, text="[Imagen no encontrada]", font=BODY_FONT).pack(pady=(20,10))
+        except Exception as e:
+            print(f"Error loading login screen image: {e}")
+            ctk.CTkLabel(self.login_window, text="[Error al cargar imagen]", font=BODY_FONT).pack(pady=(20,10))
+
+
+        ctk.CTkLabel(self.login_window, text="¡Bienvenido/a a Biblio Diversión!", font=HEADING_FONT).pack(pady=(10, 20)) # Translated, adjusted padding
 
         frame = ctk.CTkFrame(self.login_window, fg_color="#E0F2F1") # Added fg_color
-        frame.pack(pady=20, padx=30, fill="x") # Adjusted padding
+        frame.pack(pady=10, padx=30, fill="x") # Adjusted padding
 
         ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
         username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=250, placeholder_text="Nombre de usuario") # Translated placeholder, adjusted width
@@ -117,6 +143,10 @@ class App(ctk.CTk):
         quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60") # Translated and ensured BUTTON_FONT
         quit_button.pack(side="left", padx=15) # Adjusted padding
 
+        # Creator Label
+        creator_label = ctk.CTkLabel(self.login_window, text="Creado por Javi Barrero", font=BODY_FONT)
+        creator_label.pack(side="bottom", pady=(10, 10)) # Adjusted padding for bottom
+
         # Center the login window
         self.login_window.update_idletasks() # Update geometry
         x = self.winfo_screenwidth() // 2 - self.login_window.winfo_width() // 2
@@ -125,9 +155,44 @@ class App(ctk.CTk):
 
 
     def initialize_main_app_ui(self):
+        # --- Header Frame ---
+        header_frame = ctk.CTkFrame(self, fg_color="transparent") # Or a specific color
+        header_frame.pack(pady=(10, 5), padx=15, fill="x")
+
+        try:
+            logo_path_str = os.path.join('assets', 'Leerflix logo.jpg')
+            logo_path = get_data_path(logo_path_str)
+            if os.path.exists(logo_path):
+                img = Image.open(logo_path)
+                # Adjust size for header - e.g., height 60, scale width
+                original_width, original_height = img.size
+                desired_height = 60
+                aspect_ratio = original_width / original_height
+                desired_width = int(desired_height * aspect_ratio)
+
+                # Ensure width is not excessively large for the window
+                max_header_width = 800 # Max width for the logo in header
+                if desired_width > max_header_width:
+                    desired_width = max_header_width
+                    desired_height = int(desired_width / aspect_ratio)
+
+                img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
+                ctk_logo_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
+
+                logo_label = ctk.CTkLabel(header_frame, image=ctk_logo_image, text="")
+                logo_label.pack(pady=5) # Center pack by default
+            else:
+                print(f"Header logo image not found at {logo_path}")
+                # Fallback text if logo not found
+                ctk.CTkLabel(header_frame, text="Biblio Diversión", font=HEADING_FONT).pack(pady=10)
+        except Exception as e:
+            print(f"Error loading header logo image: {e}")
+            # Fallback text on error
+            ctk.CTkLabel(header_frame, text="Biblio Diversión - Error Cargando Logo", font=HEADING_FONT).pack(pady=10)
+
         # Main TabView
         self.tab_view = ctk.CTkTabview(self)
-        self.tab_view.pack(expand=True, fill="both", padx=15, pady=15)
+        self.tab_view.pack(expand=True, fill="both", padx=15, pady=(5, 15)) # Adjusted top pady for tab_view
 
         # Pestaña de Clasificación primero
         self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
