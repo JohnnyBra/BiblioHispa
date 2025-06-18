@@ -1701,40 +1701,65 @@ class App(ctk.CTk):
         students_data = student_manager.get_students_sorted_by_points(classroom_filter=classroom_to_filter)
 
         if not students_data:
-            no_data_label = ctk.CTkLabel(self.leaderboard_scroll_frame, text="No hay datos para mostrar.", font=BODY_FONT) # BODY_FONT applied
-            no_data_label.pack(pady=30, padx=10) # Adjusted pady
+            no_data_label = ctk.CTkLabel(self.leaderboard_scroll_frame, text="No hay datos para mostrar.", font=BODY_FONT)
+            no_data_label.pack(pady=30, padx=10)
             return
 
-        entry_icon = self.load_icon("students", size=(24,24)) # Adjusted icon size
+        entry_icon = self.load_icon("students", size=(24,24))
+
+        gold_color = ("#FFF9C4", "#534B0C")
+        silver_color = ("#F5F5F5", "#424242")
+        bronze_color = ("#FFE0B2", "#6D4C41")
+        default_item_color = ("#FFFFFF", "#2B2B2B") # Assuming a default or use theme's default
 
         for i, student in enumerate(students_data):
             rank = i + 1
 
-            item_frame = ctk.CTkFrame(self.leaderboard_scroll_frame, corner_radius=6, border_width=1, border_color=("gray80", "gray30"))
-            item_frame.pack(fill="x", pady=8, padx=10) # Adjusted pady and padx
+            item_bg_color = default_item_color
+            name_font_size_increase = 0
+            rank_font_size = 18
 
-            rank_label = ctk.CTkLabel(item_frame, text=f"#{rank}", font=(APP_FONT_FAMILY, 18, "bold")) # Font updated
-            rank_label.pack(side="left", padx=(10,15), pady=10) # Adjusted padx
+            if rank == 1:
+                item_bg_color = gold_color
+                name_font_size_increase = 2
+                rank_font_size = 20
+            elif rank == 2:
+                item_bg_color = silver_color
+            elif rank == 3:
+                item_bg_color = bronze_color
+            # else: # For alternating row colors if desired for ranks > 3
+                # if i % 2 == 0:
+                #     item_bg_color = ("#F0F0F0", "#303030")
+                # else:
+                #     item_bg_color = default_item_color # Or another color for odd rows
+
+            item_frame = ctk.CTkFrame(self.leaderboard_scroll_frame, corner_radius=6, border_width=1, border_color=("gray70", "gray40"), fg_color=item_bg_color) # border_color adjusted slightly
+            item_frame.pack(fill="x", pady=8, padx=10)
+
+            rank_label = ctk.CTkLabel(item_frame, text=f"#{rank}", font=(APP_FONT_FAMILY, rank_font_size, "bold"))
+            rank_label.pack(side="left", padx=(10,15), pady=10)
 
             if entry_icon:
                 icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="")
                 icon_label.pack(side="left", padx=(0,10), pady=10)
 
-            details_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
-            details_frame.pack(side="left", padx=10, pady=(8,8), expand=True, fill="x") # Adjusted pady
+            details_frame = ctk.CTkFrame(item_frame, fg_color="transparent") # Transparent to show item_frame color
+            details_frame.pack(side="left", padx=10, pady=(8,8), expand=True, fill="x")
 
             name_text = student.get('name', 'N/A')
             points_text = student.get('points', 0)
             classroom_text = student.get('classroom', 'N/A')
 
-            name_label = ctk.CTkLabel(details_frame, text=name_text, font=(APP_FONT_FAMILY, 16, "bold"), anchor="w") # Font updated
-            name_label.pack(fill="x", pady=(0,2)) # Added pady
+            base_name_font_size = 16
+            name_label_font = (APP_FONT_FAMILY, base_name_font_size + name_font_size_increase, "bold")
+            name_label = ctk.CTkLabel(details_frame, text=name_text, font=name_label_font, anchor="w")
+            name_label.pack(fill="x", pady=(0,2))
 
             points_label_text = f"{points_text} Puntos"
             if filter_type == "🏆 Global":
                 points_label_text += f"  |  Clase: {classroom_text}"
 
-            points_label = ctk.CTkLabel(details_frame, text=points_label_text, font=BODY_FONT, anchor="w") # BODY_FONT applied
+            points_label = ctk.CTkLabel(details_frame, text=points_label_text, font=BODY_FONT, anchor="w")
             points_label.pack(fill="x")
 
     # def um_toggle_password_visibility(self): # Optional helper
