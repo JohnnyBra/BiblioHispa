@@ -12,7 +12,10 @@ from utils import get_data_path # Import the helper
 
 # --- Global Styling & Theme ---
 ctk.set_appearance_mode("Light")  # Options: "System" (default), "Dark", "Light"
-ctk.set_default_color_theme("leerflix_theme.json") # Options: "blue" (default), "green", "dark-blue"
+# Construct the absolute path to the theme file
+script_directory = os.path.dirname(os.path.abspath(__file__))
+theme_path = os.path.join(script_directory, "leerflix_theme.json")
+ctk.set_default_color_theme(theme_path) # Options: "blue" (default), "green", "dark-blue"
 
 APP_FONT_FAMILY = "Comic Sans MS" # A common sans-serif font
 HEADING_FONT = (APP_FONT_FAMILY, 22, "bold")
