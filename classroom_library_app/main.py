@@ -29,7 +29,7 @@ BUTTON_FONT = (APP_FONT_FAMILY, 15, "bold")
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("📚 Gestor de Biblioteca Escolar 🧸") # Translated
+        self.title("📚 Leerflix 🧸") # Changed title
         self.geometry("950x750")
 
         # Set window icon
@@ -190,11 +190,11 @@ class App(ctk.CTk):
             else:
                 print(f"Header logo image not found at {logo_path}")
                 # Fallback text if logo not found
-                ctk.CTkLabel(header_frame, text="Biblio Diversión", font=HEADING_FONT).pack(pady=10)
+                ctk.CTkLabel(header_frame, text="Leerflix", font=HEADING_FONT).pack(pady=10) # Changed text
         except Exception as e:
             print(f"Error loading header logo image: {e}")
             # Fallback text on error
-            ctk.CTkLabel(header_frame, text="Biblio Diversión - Error Cargando Logo", font=HEADING_FONT).pack(pady=10)
+            ctk.CTkLabel(header_frame, text="Leerflix - Error Cargando Logo", font=HEADING_FONT).pack(pady=10) # Changed text
 
         # Main TabView
         self.tab_view = ctk.CTkTabview(self)
