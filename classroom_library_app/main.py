@@ -155,7 +155,7 @@ class App(ctk.CTk):
 
         # Creator Label in a dedicated bottom frame
         bottom_frame = ctk.CTkFrame(self.login_window, fg_color="transparent") # Make frame background transparent
-        bottom_frame.pack(side="bottom", fill="x", padx=10, pady=5) # Pack frame at the bottom
+        bottom_frame.pack(side="bottom", fill="x", padx=10, pady=0) # Pack frame at the bottom
 
         creator_label_on_frame = ctk.CTkLabel(
             bottom_frame,
@@ -163,7 +163,7 @@ class App(ctk.CTk):
             font=BODY_FONT,
             text_color=("black", "white")
         )
-        creator_label_on_frame.pack(pady=5) # Pack label inside the bottom_frame
+        creator_label_on_frame.pack(pady=2) # Pack label inside the bottom_frame
         # Center the login window
         self.login_window.update_idletasks() # Update geometry
         x = self.winfo_screenwidth() // 2 - self.login_window.winfo_width() // 2
