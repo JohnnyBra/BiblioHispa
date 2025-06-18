@@ -389,5 +389,25 @@
     "size": 12,
     "weight": "normal",
     "slant": "roman"
+  },
+  "DropdownMenu": {
+    "corner_radius": 6,
+    "fg_color": [
+      "#FFFFFF",
+      "#2C2C2C"
+    ],
+    "hover_color": [
+      "#F44336",
+      "#F44336"
+    ],
+    "text_color": [
+      "#202020",
+      "#E0E0E0"
+    ],
+    "border_width": 1,
+    "border_color": [
+      "#BDBDBD",
+      "#555555"
+    ]
   }
 }
