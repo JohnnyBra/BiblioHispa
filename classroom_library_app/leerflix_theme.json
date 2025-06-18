@@ -383,5 +383,11 @@
       "#BDBDBD",
       "#757575"
     ]
+  },
+  "CTkFont": {
+    "family": "Arial",
+    "size": 12,
+    "weight": "normal",
+    "slant": "roman"
   }
 }
