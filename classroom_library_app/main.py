@@ -69,7 +69,7 @@ class App(ctk.CTk):
 
         self.login_window = ctk.CTkToplevel(self)
         self.login_window.title("¡Hola Peque!") # Translated
-        self.login_window.geometry("450x550") # Adjusted window size
+        self.login_window.geometry("450x580") # Adjusted window size
         self.login_window.transient(self)
         self.login_window.grab_set()
         self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application)
@@ -90,7 +90,7 @@ class App(ctk.CTk):
                 img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
                 ctk_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
                 image_label = ctk.CTkLabel(self.login_window, image=ctk_image, text="")
-                image_label.pack(pady=(20, 10)) # Padding top and bottom
+                image_label.pack(pady=(15, 5)) # Padding top and bottom
             else:
                 print(f"Login screen image not found at {image_path}")
                 # Optionally, add a placeholder label if image is missing
@@ -101,7 +101,7 @@ class App(ctk.CTk):
 
 
         frame = ctk.CTkFrame(self.login_window, fg_color="#E0F2F1") # Added fg_color
-        frame.pack(pady=10, padx=30, fill="x") # Adjusted padding
+        frame.pack(pady=5, padx=30, fill="x") # Adjusted padding
         frame.columnconfigure(1, weight=1) # Allow entry column to expand if needed
 
         ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
@@ -119,7 +119,7 @@ class App(ctk.CTk):
 
 
         error_label = ctk.CTkLabel(self.login_window, text="", text_color="red", font=BODY_FONT) # Ensured BODY_FONT
-        error_label.pack(pady=(0,10)) # Adjusted padding
+        error_label.pack(pady=(0,5)) # Adjusted padding
 
         def login_action():
             username = username_entry.get()
@@ -134,7 +134,7 @@ class App(ctk.CTk):
                 username_entry.focus()
 
         button_frame = ctk.CTkFrame(self.login_window, fg_color="transparent")
-        button_frame.pack(pady=20) # Adjusted padding
+        button_frame.pack(pady=15) # Adjusted padding
 
         login_button = ctk.CTkButton(button_frame, text="Acceder", font=BUTTON_FONT, command=login_action) # Translated and ensured BUTTON_FONT
         login_button.pack(side="left", padx=15) # Adjusted padding
@@ -143,8 +143,8 @@ class App(ctk.CTk):
         quit_button.pack(side="left", padx=15) # Adjusted padding
 
         # Creator Label
-        creator_label = ctk.CTkLabel(self.login_window, text="Creado por Javi Barrero", font=BODY_FONT)
-        creator_label.pack(side="bottom", pady=(10, 10)) # Adjusted padding for bottom
+        creator_label = ctk.CTkLabel(self.login_window, text="Creado por Javi Barrero", font=BODY_FONT, text_color=("black", "white"))
+        creator_label.pack(side="bottom", pady=(5, 5)) # Adjusted padding for bottom
 
         # Center the login window
         self.login_window.update_idletasks() # Update geometry
