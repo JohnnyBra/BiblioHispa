@@ -100,8 +100,6 @@ class App(ctk.CTk):
             ctk.CTkLabel(self.login_window, text="[Error al cargar imagen]", font=BODY_FONT).pack(pady=(20,10))
 
 
-        ctk.CTkLabel(self.login_window, text="Bienvenidos a LEERFLIX", font=HEADING_FONT).pack(pady=(10, 20)) # Changed text
-
         frame = ctk.CTkFrame(self.login_window, fg_color="#E0F2F1") # Added fg_color
         frame.pack(pady=10, padx=30, fill="x") # Adjusted padding
         frame.columnconfigure(1, weight=1) # Allow entry column to expand if needed
@@ -157,44 +155,59 @@ class App(ctk.CTk):
 
     def initialize_main_app_ui(self):
         # --- Header Frame ---
-        header_frame = ctk.CTkFrame(self, fg_color="transparent") # Or a specific color
+        header_frame = ctk.CTkFrame(self, fg_color="transparent")
         header_frame.pack(pady=(10, 5), padx=15, fill="x")
 
         try:
-            logo_path_str = os.path.join('assets', 'leerflix logo ancho.jpg') # Changed filename
-            logo_path = get_data_path(logo_path_str)
-            if os.path.exists(logo_path):
-                img = Image.open(logo_path)
-                # Adjust size for header
-                original_width, original_height = img.size
-                desired_height = 80  # Increased target height
+            # Main logo (existing)
+            main_logo_path_str = os.path.join('assets', 'leerflix logo ancho.jpg')
+            main_logo_path = get_data_path(main_logo_path_str)
+            if os.path.exists(main_logo_path):
+                main_img = Image.open(main_logo_path)
+                original_width, original_height = main_img.size
+                desired_height = 80
                 aspect_ratio = original_width / original_height
                 desired_width = int(desired_height * aspect_ratio)
-
-                # Ensure width is not excessively large for the window
-                max_header_width = 900 # Increased max_header_width
+                max_header_width = 900
                 if desired_width > max_header_width:
                     desired_width = max_header_width
-                    # Recalculate height to maintain aspect ratio if width is capped
                     desired_height = int(desired_width / aspect_ratio)
-
-                # It's good practice to ensure desired_height is at least 1px if capping width leads to 0
                 if desired_height < 1: desired_height = 1
+                main_img_resized = main_img.resize((desired_width, desired_height), Image.LANCZOS)
+                ctk_main_logo_image = ctk.CTkImage(light_image=main_img_resized, dark_image=main_img_resized, size=(desired_width, desired_height))
 
+                main_logo_label = ctk.CTkLabel(header_frame, image=ctk_main_logo_image, text="")
+                main_logo_label.pack(side="left", padx=(0, 10), pady=5) # Pack to the left
 
-                img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
-                ctk_logo_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
-
-                logo_label = ctk.CTkLabel(header_frame, image=ctk_logo_image, text="")
-                logo_label.pack(pady=5) # Center pack by default
             else:
-                print(f"Header logo image not found at {logo_path}")
-                # Fallback text if logo not found
-                ctk.CTkLabel(header_frame, text="Leerflix", font=HEADING_FONT).pack(pady=10) # Changed text
+                print(f"Header logo image not found at {main_logo_path}")
+                ctk.CTkLabel(header_frame, text="Leerflix", font=HEADING_FONT).pack(side="left", padx=(0,10), pady=10)
+
+            # New logo (logo.png)
+            small_logo_path_str = os.path.join('assets', 'logo.png')
+            small_logo_path = get_data_path(small_logo_path_str)
+            if os.path.exists(small_logo_path):
+                small_img = Image.open(small_logo_path)
+                s_original_width, s_original_height = small_img.size
+                s_desired_height = 60 # Adjust as needed
+                s_aspect_ratio = s_original_width / s_original_height
+                s_desired_width = int(s_desired_height * s_aspect_ratio)
+
+                small_img_resized = small_img.resize((s_desired_width, s_desired_height), Image.LANCZOS)
+                ctk_small_logo_image = ctk.CTkImage(light_image=small_img_resized, dark_image=small_img_resized, size=(s_desired_width, s_desired_height))
+
+                small_logo_label = ctk.CTkLabel(header_frame, image=ctk_small_logo_image, text="")
+                small_logo_label.pack(side="right", padx=(10, 0), pady=5) # Pack to the right
+            else:
+                print(f"Small logo image 'logo.png' not found at {small_logo_path}")
+                # Optionally, add a fallback text label if this logo is also critical
+                # ctk.CTkLabel(header_frame, text="Logo", font=BODY_FONT).pack(side="right", padx=(10,0), pady=10)
+
         except Exception as e:
-            print(f"Error loading header logo image: {e}")
-            # Fallback text on error
-            ctk.CTkLabel(header_frame, text="Leerflix - Error Cargando Logo", font=HEADING_FONT).pack(pady=10) # Changed text
+            print(f"Error loading header logo image(s): {e}")
+            # Fallback text on error - adjust if one logo loads and other doesn't
+            if not 'main_logo_label' in locals() and not 'small_logo_label' in locals(): # Check if any logo loaded
+                 ctk.CTkLabel(header_frame, text="Leerflix - Error Cargando Logos", font=HEADING_FONT).pack(pady=10)
 
         # Main TabView
         self.tab_view = ctk.CTkTabview(self)
