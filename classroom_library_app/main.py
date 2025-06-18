@@ -411,6 +411,20 @@ class App(ctk.CTk):
 
             # Removed image_path display for now as it's not in the new schema
 
+            # --- Lend Button ---
+            available_count = book_manager.get_available_book_count(book['id'])
+            lend_button_state = ctk.NORMAL if available_count > 0 else ctk.DISABLED
+
+            lend_button = ctk.CTkButton(
+                book_item_frame,
+                text="Prestar",
+                font=BUTTON_FONT,
+                state=lend_button_state,
+                command=lambda b=book: self.prompt_lend_book_from_view_tab(b['id']),
+                corner_radius=6
+            )
+            lend_button.grid(row=3, column=0, columnspan=3, padx=10, pady=(5,10), sticky="ew")
+
     def search_books_ui(self):
         query = self.search_entry.get()
         if not query:
@@ -1724,6 +1738,137 @@ class App(ctk.CTk):
     #     else:
     #         self.um_password_entry.configure(show="*")
     #         self.um_confirm_password_entry.configure(show="*")
+
+    def prompt_lend_book_from_view_tab(self, book_id):
+        book_details = book_manager.get_book_by_id_db(book_id)
+        if not book_details:
+            messagebox.showerror("Error", f"No se pudo encontrar el libro con ID: {book_id}")
+            return
+
+        book_title = book_details.get('titulo', 'Desconocido')
+
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Prestar Libro")
+        dialog.geometry("450x350") # Adjusted size for more content
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.protocol("WM_DELETE_WINDOW", lambda: dialog.destroy()) # Ensure clean close
+
+        main_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        main_frame.pack(expand=True, fill="both", padx=15, pady=15)
+
+        ctk.CTkLabel(main_frame, text=f"Prestar el libro: {book_title}", font=SUBHEADING_FONT).pack(pady=(0,10))
+
+        # --- Borrowing Student Selection ---
+        ctk.CTkLabel(main_frame, text="Seleccionar Alumno Prestatario:", font=BODY_FONT).pack(anchor="w", pady=(5,0))
+        student_combo = ctk.CTkComboBox(main_frame, font=BODY_FONT, width=400, dropdown_font=BODY_FONT)
+        student_combo.pack(fill="x", pady=(0,10))
+
+        students = student_manager.get_students_db()
+        student_name_to_id_map = {s['name']: s['id'] for s in students}
+        student_names = list(student_name_to_id_map.keys())
+
+        if student_names:
+            student_combo.configure(values=student_names)
+            student_combo.set(student_names[0])
+        else:
+            student_combo.configure(values=["No hay alumnos"], state="disabled")
+            student_combo.set("No hay alumnos")
+
+        # --- Lending Leader Selection ---
+        ctk.CTkLabel(main_frame, text="Seleccionar Líder que Autoriza:", font=BODY_FONT).pack(anchor="w", pady=(5,0))
+        leader_combo = ctk.CTkComboBox(main_frame, font=BODY_FONT, width=400, dropdown_font=BODY_FONT)
+        leader_combo.pack(fill="x", pady=(0,15))
+
+        leaders = student_manager.get_students_db(role_filter='leader')
+        leader_name_to_id_map = {f"{l['name']} ({l['classroom']})": l['id'] for l in leaders}
+        leader_names = list(leader_name_to_id_map.keys())
+
+        if leader_names:
+            leader_combo.configure(values=leader_names)
+            leader_combo.set(leader_names[0])
+        else:
+            leader_combo.configure(values=["No hay líderes"], state="disabled")
+            leader_combo.set("No hay líderes")
+
+        # --- Confirm and Cancel Buttons ---
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(fill="x", pady=(10,0))
+        button_frame.columnconfigure((0,1), weight=1) # Make buttons expand
+
+        confirm_button = ctk.CTkButton(
+            button_frame,
+            text="Confirmar Préstamo",
+            font=BUTTON_FONT,
+            command=lambda: self._confirm_lend_action(
+                dialog, book_id, student_combo, leader_combo,
+                student_name_to_id_map, leader_name_to_id_map
+            )
+        )
+        confirm_button.grid(row=0, column=0, padx=(0,5), sticky="ew")
+
+        cancel_button = ctk.CTkButton(
+            button_frame,
+            text="Cancelar",
+            font=BUTTON_FONT,
+            command=dialog.destroy,
+            fg_color="gray50", hover_color="gray60"
+        )
+        cancel_button.grid(row=0, column=1, padx=(5,0), sticky="ew")
+
+        if not student_names or not leader_names: # Disable confirm if no students or no leaders
+            confirm_button.configure(state="disabled")
+            if not student_names:
+                 ctk.CTkLabel(main_frame, text="No hay alumnos disponibles para prestar.", text_color="orange", font=BODY_FONT).pack(pady=(5,0))
+            if not leader_names:
+                 ctk.CTkLabel(main_frame, text="No hay líderes disponibles para autorizar.", text_color="orange", font=BODY_FONT).pack(pady=(5,0))
+
+
+    def _confirm_lend_action(self, dialog, book_id, student_combo, leader_combo, student_map, leader_map):
+        selected_student_name = student_combo.get()
+        selected_leader_display_name = leader_combo.get()
+
+        if selected_student_name == "No hay alumnos" or not selected_student_name:
+            messagebox.showerror("Error de Selección", "Por favor, seleccione un alumno prestatario.", parent=dialog)
+            return
+
+        if selected_leader_display_name == "No hay líderes" or not selected_leader_display_name:
+            messagebox.showerror("Error de Selección", "Por favor, seleccione un líder que autoriza.", parent=dialog)
+            return
+
+        student_id = student_map.get(selected_student_name)
+        leader_id = leader_map.get(selected_leader_display_name)
+
+        if not student_id:
+            messagebox.showerror("Error Interno", f"No se pudo encontrar el ID para el alumno: {selected_student_name}", parent=dialog)
+            return
+
+        if not leader_id:
+            messagebox.showerror("Error Interno", f"No se pudo encontrar el ID para el líder: {selected_leader_display_name}", parent=dialog)
+            return
+
+        due_date_str = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+
+        try:
+            success = book_manager.loan_book_db(book_id, student_id, due_date_str, leader_id)
+            if success:
+                messagebox.showinfo("Éxito", "Libro prestado correctamente.", parent=dialog)
+                self.refresh_book_list_ui() # Refresh the main book list
+                if hasattr(self, 'refresh_loan_related_combos_and_lists'):
+                    self.refresh_loan_related_combos_and_lists() # Refresh lists in manage loans tab
+                dialog.destroy()
+            else:
+                # Check available count again, it might have changed
+                available_count = book_manager.get_available_book_count(book_id)
+                if available_count == 0:
+                    messagebox.showerror("Error", "No se pudo prestar el libro. Ya no hay ejemplares disponibles.", parent=dialog)
+                else:
+                    messagebox.showerror("Error", "No se pudo prestar el libro. Verifique los datos o la consola.", parent=dialog)
+        except Exception as e:
+            messagebox.showerror("Error Inesperado", f"Ocurrió un error: {str(e)}", parent=dialog)
+            print(f"Error during loan_book_db: {e}") # Log to console for debugging
+            dialog.destroy() # Still destroy dialog on unexpected error
+
 
 # Main execution
 if __name__ == "__main__":
