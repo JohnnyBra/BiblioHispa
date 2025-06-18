@@ -12,7 +12,10 @@ from utils import get_data_path # Import the helper
 
 # --- Global Styling & Theme ---
 ctk.set_appearance_mode("Light")  # Options: "System" (default), "Dark", "Light"
-ctk.set_default_color_theme("green") # Options: "blue" (default), "green", "dark-blue"
+# Construct the absolute path to the theme file
+script_directory = os.path.dirname(os.path.abspath(__file__))
+theme_path = os.path.join(script_directory, "leerflix_theme.json")
+ctk.set_default_color_theme(theme_path) # Options: "blue" (default), "green", "dark-blue"
 
 APP_FONT_FAMILY = "Comic Sans MS" # A common sans-serif font
 HEADING_FONT = (APP_FONT_FAMILY, 22, "bold")
@@ -107,7 +110,7 @@ class App(ctk.CTk):
                 desired_height = 150 # Adjust this based on actual image aspect ratio
                 img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
                 ctk_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
-                image_label = ctk.CTkLabel(self.login_window, image=ctk_image, text="")
+                image_label = ctk.CTkLabel(self.login_window, image=ctk_image, text="", font=BODY_FONT)
                 image_label.pack(pady=(15, 5)) # Padding top and bottom
             else:
                 print(f"Login screen image not found at {image_path}")
@@ -118,9 +121,9 @@ class App(ctk.CTk):
             ctk.CTkLabel(self.login_window, text="[Error al cargar imagen]", font=BODY_FONT).pack(pady=(20,10))
 
 
-        frame = ctk.CTkFrame(self.login_window, fg_color="#E0F2F1") # Added fg_color
-        frame.pack(pady=5, padx=30, fill="x") # Adjusted padding
-        frame.columnconfigure(1, weight=1) # Allow entry column to expand if needed
+        frame = ctk.CTkFrame(self.login_window, fg_color=("#FFFFFF", "#2C2C2C"))
+        frame.pack(pady=5, padx=30, fill="x")
+        frame.columnconfigure(1, weight=1)
 
         ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
         username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=200, placeholder_text="Nombre de usuario") # Translated placeholder, adjusted width
@@ -147,7 +150,7 @@ class App(ctk.CTk):
                 self.login_window = None
                 self.initialize_main_app_ui()
             else:
-                error_label.configure(text="Error de acceso. Usuario o contraseña incorrectos.") # Translated
+                error_label.configure(text="Error de acceso. Usuario o contraseña incorrectos.", text_color=("#D12D2D", "#FF6B6B"))
                 password_entry.delete(0, "end")
                 username_entry.focus()
 
@@ -157,7 +160,7 @@ class App(ctk.CTk):
         login_button = ctk.CTkButton(button_frame, text="Acceder", font=BUTTON_FONT, command=login_action) # Translated and ensured BUTTON_FONT
         login_button.pack(side="left", padx=15) # Adjusted padding
 
-        quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60") # Translated and ensured BUTTON_FONT
+        quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color=("#757575", "#505050"), hover_color=("#9E9E9E", "#656565")) # Translated and ensured BUTTON_FONT
         quit_button.pack(side="left", padx=15) # Adjusted padding
 
         # # Creator Label (Debugging)
@@ -212,7 +215,7 @@ class App(ctk.CTk):
                 main_img_resized = main_img.resize((desired_width, desired_height), Image.LANCZOS)
                 ctk_main_logo_image = ctk.CTkImage(light_image=main_img_resized, dark_image=main_img_resized, size=(desired_width, desired_height))
 
-                main_logo_label = ctk.CTkLabel(header_frame, image=ctk_main_logo_image, text="")
+                main_logo_label = ctk.CTkLabel(header_frame, image=ctk_main_logo_image, text="", font=BODY_FONT)
                 main_logo_label.pack(side="left", padx=(0, 10), pady=5) # Pack to the left
 
             else:
@@ -232,7 +235,7 @@ class App(ctk.CTk):
                 small_img_resized = small_img.resize((s_desired_width, s_desired_height), Image.LANCZOS)
                 ctk_small_logo_image = ctk.CTkImage(light_image=small_img_resized, dark_image=small_img_resized, size=(s_desired_width, s_desired_height))
 
-                small_logo_label = ctk.CTkLabel(header_frame, image=ctk_small_logo_image, text="")
+                small_logo_label = ctk.CTkLabel(header_frame, image=ctk_small_logo_image, text="", font=BODY_FONT)
                 small_logo_label.pack(side="right", padx=(10, 0), pady=5) # Pack to the right
             else:
                 print(f"Small logo image 'logo.png' not found at {small_logo_path}")
@@ -310,8 +313,8 @@ class App(ctk.CTk):
                 dev_placeholder_dir = os.path.join(os.path.abspath("."), "assets", "icons")
                 os.makedirs(dev_placeholder_dir, exist_ok=True)
                 print(f"Warning: Icon {icon_path} (from {relative_icon_path}) not found. Creating placeholder.")
-                placeholder_image = Image.new("RGBA", size, (200, 220, 200, 100)) # Pale green placeholder for light mode
-                dark_placeholder_image = Image.new("RGBA", size, (70, 90, 70, 100))   # Darker pale green for dark mode
+                placeholder_image = Image.new("RGBA", size, (224, 224, 224, 100)) # Light gray (R,G,B,A)
+                dark_placeholder_image = Image.new("RGBA", size, (66, 66, 66, 100))     # Dark gray (R,G,B,A)
                 img_ctk = ctk.CTkImage(light_image=placeholder_image, dark_image=dark_placeholder_image, size=size)
                 self.icon_cache[icon_name] = img_ctk # Cache placeholder
                 return img_ctk
@@ -324,8 +327,8 @@ class App(ctk.CTk):
             print(f"Error loading icon {relative_icon_path}: {e}")
             # Attempt to return a placeholder on any error during load
             try:
-                placeholder_image = Image.new("RGBA", size, (200, 220, 200, 100)) # Pale green placeholder for light mode
-                dark_placeholder_image = Image.new("RGBA", size, (70, 90, 70, 100))   # Darker pale green for dark mode
+                placeholder_image = Image.new("RGBA", size, (224, 224, 224, 100)) # Light gray (R,G,B,A)
+                dark_placeholder_image = Image.new("RGBA", size, (66, 66, 66, 100))     # Dark gray (R,G,B,A)
                 img_ctk = ctk.CTkImage(light_image=placeholder_image, dark_image=dark_placeholder_image, size=size)
                 self.icon_cache[icon_name] = img_ctk # Cache placeholder
                 return img_ctk
@@ -336,7 +339,7 @@ class App(ctk.CTk):
 
     def setup_manage_books_tab(self):
         tab = self.manage_books_tab
-        tab.configure(fg_color=("#E8F5E9", "#2C3E50"))
+        # tab.configure(fg_color=("#FFFFFF", "#2C2C2C")) # Example: Manage Books
 
         # --- Add Book Form ---
         add_book_frame = ctk.CTkFrame(tab, corner_radius=10)
@@ -453,7 +456,7 @@ class App(ctk.CTk):
 
     def setup_view_books_tab(self):
         tab = self.view_books_tab
-        tab.configure(fg_color=("#E0F2F1", "#2C3E50"))
+        # tab.configure(fg_color=("#FFFFFF", "#2C2C2C")) # Example: View Books
 
         controls_frame = ctk.CTkFrame(tab, corner_radius=10)
         controls_frame.pack(pady=15, padx=15, fill="x")
@@ -500,7 +503,7 @@ class App(ctk.CTk):
         available_count = book_manager.get_available_book_count(book_data['id'])
         total_count = book_data.get('cantidad_total', 0)
         availability_text = f"Disponible: {available_count} / {total_count}"
-        availability_color = "green" if available_count > 0 else "red"
+        availability_color = (("green", "lightgreen") if available_count > 0 else ("#D12D2D", "#FF6B6B"))
 
         # Store widgets in a dictionary on the frame for easy access in _update_book_item_frame_content
         book_item_frame.widgets = {}
@@ -539,7 +542,7 @@ class App(ctk.CTk):
         available_count = book_manager.get_available_book_count(book_data['id'])
         total_count = book_data.get('cantidad_total', 0)
         availability_text = f"Disponible: {available_count} / {total_count}"
-        availability_color = "green" if available_count > 0 else "red"
+        availability_color = (("green", "lightgreen") if available_count > 0 else ("#D12D2D", "#FF6B6B"))
 
         frame.widgets['status_label'].configure(text=availability_text, text_color=availability_color)
         frame.widgets['title_label'].configure(text=f"{book_data.get('titulo', 'N/A')}")
@@ -642,7 +645,7 @@ class App(ctk.CTk):
 
     def setup_manage_students_tab(self):
         tab = self.manage_students_tab
-        tab.configure(fg_color=("#F1F8E9", "#2C3E50"))
+        # tab.configure(fg_color=("#FFFFFF", "#2C2C2C")) # Example: Manage Students
 
         add_student_frame = ctk.CTkFrame(tab, corner_radius=10)
         add_student_frame.pack(pady=15, padx=15, fill="x")
@@ -731,7 +734,7 @@ class App(ctk.CTk):
 
     def _create_student_item_frame_manage_tab(self, student_data, index):
         # Determine alternating color based on index
-        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        fg_color = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=fg_color)
         student_item_frame.student_id = student_data['id']
         student_item_frame.widgets = {}
@@ -748,7 +751,7 @@ class App(ctk.CTk):
         frame.widgets['details_label'].configure(text=details)
 
         # Update alternating color based on index
-        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        fg_color = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         frame.configure(fg_color=fg_color)
 
 
@@ -804,7 +807,7 @@ class App(ctk.CTk):
 
     def setup_manage_loans_tab(self):
         tab = self.manage_loans_tab
-        tab.configure(fg_color=("#E0F7FA", "#2C3E50"))  # This was already updated
+        # tab.configure(fg_color=("#FFFFFF", "#2C2C2C")) # Example: Manage Loans / Leaderboard
 
         # Dictionaries to map display names to IDs
         self.leader_student_map = {}
@@ -879,8 +882,8 @@ class App(ctk.CTk):
 
         current_loans_tab = loans_display_tabview.add("Préstamos Actuales") # Translated
         reminders_tab = loans_display_tabview.add("⏰ Recordatorios") # Translated
-        current_loans_tab.configure(fg_color=("#F5F5F5", "#343638"))
-        reminders_tab.configure(fg_color=("#FFF0F5", "#383436"))
+        # current_loans_tab.configure(fg_color=...) # Using theme default
+        # reminders_tab.configure(fg_color=...) # Using theme default
 
 
         self.current_loans_label = ctk.CTkLabel(current_loans_tab, text="Préstamos Actuales en [Clase del Líder]", font=SUBHEADING_FONT) # Ensured SUBHEADING_FONT
@@ -954,9 +957,9 @@ class App(ctk.CTk):
 
 
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
-        ctk.CTkLabel(self.current_loans_frame, text="Por favor, seleccione un líder estudiantil para gestionar préstamos.").pack(pady=20, padx=10) # Translated
+        ctk.CTkLabel(self.current_loans_frame, text="Por favor, seleccione un líder estudiantil para gestionar préstamos.", font=BODY_FONT).pack(pady=20, padx=10) # Translated
         for widget in self.reminders_frame.winfo_children(): widget.destroy()
-        ctk.CTkLabel(self.reminders_frame, text="Por favor, seleccione un líder estudiantil para ver recordatorios.").pack(pady=20, padx=10) # Translated
+        ctk.CTkLabel(self.reminders_frame, text="Por favor, seleccione un líder estudiantil para ver recordatorios.", font=BODY_FONT).pack(pady=20, padx=10) # Translated
 
     def refresh_loan_related_combos_and_lists(self):
         if not self.current_leader_id or not self.current_leader_classroom: # current_leader_classroom is the ubicacion
@@ -1138,7 +1141,7 @@ class App(ctk.CTk):
             messagebox.showerror("Error", "No se pudo extender el préstamo. Verifique la consola para más detalles.")
 
     def _create_loan_item_frame(self, loan_data, index):
-        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        fg_color = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         item_frame = ctk.CTkFrame(self.current_loans_frame, fg_color=fg_color)
         item_frame.loan_id = loan_data['loan_id']
         item_frame.widgets = {}
@@ -1172,7 +1175,7 @@ class App(ctk.CTk):
 
     def _update_loan_item_frame_content(self, frame, loan_data, index):
         frame.loan_id = loan_data['loan_id']
-        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        fg_color = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         frame.configure(fg_color=fg_color)
 
         loan_date_str = loan_data.get('loan_date', 'N/A')
@@ -1265,7 +1268,7 @@ class App(ctk.CTk):
 
 
     def _create_reminder_item_frame(self, reminder_data, index):
-        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        fg_color = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         item_frame = ctk.CTkFrame(self.reminders_frame, fg_color=fg_color)
         item_frame.loan_id = reminder_data['loan_id'] # Assuming 'loan_id' is present and unique for reminders
         item_frame.widgets = {}
@@ -1288,18 +1291,18 @@ class App(ctk.CTk):
                   f"Fecha Vencimiento: {due_date_display}"
         if is_overdue: details += " (VENCIDO)"
 
-        text_color_tuple = ("#D03030", "#E04040") if is_overdue else (None, None)
         font_weight = "bold" if is_overdue else "normal"
+        text_color_for_label = ("#D12D2D", "#FF6B6B") if is_overdue else (None, None) # (None,None) will use default from theme
 
         item_frame.widgets['details_label'] = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w",
-                                                           text_color=text_color_tuple[0] if ctk.get_appearance_mode().lower() == "light" else text_color_tuple[1],
+                                                           text_color=text_color_for_label,
                                                            font=ctk.CTkFont(family=APP_FONT_FAMILY, size=BODY_FONT[1], weight=font_weight))
         item_frame.widgets['details_label'].pack(pady=8, padx=10, fill="x", expand=True)
         return item_frame
 
     def _update_reminder_item_frame_content(self, frame, reminder_data, index):
         frame.loan_id = reminder_data['loan_id']
-        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        fg_color = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         frame.configure(fg_color=fg_color)
 
         today = datetime.now().date()
@@ -1320,11 +1323,11 @@ class App(ctk.CTk):
                   f"Fecha Vencimiento: {due_date_display}"
         if is_overdue: details += " (VENCIDO)"
 
-        text_color_tuple = ("#D03030", "#E04040") if is_overdue else (None, None)
         font_weight = "bold" if is_overdue else "normal"
+        text_color_for_label = ("#D12D2D", "#FF6B6B") if is_overdue else (None, None) # (None,None) will use default from theme
 
         frame.widgets['details_label'].configure(text=details,
-                                                 text_color=text_color_tuple[0] if ctk.get_appearance_mode().lower() == "light" else text_color_tuple[1],
+                                                 text_color=text_color_for_label,
                                                  font=ctk.CTkFont(family=APP_FONT_FAMILY, size=BODY_FONT[1], weight=font_weight))
 
     def refresh_reminders_list(self):
@@ -1386,7 +1389,7 @@ class App(ctk.CTk):
     # --- USER MANAGEMENT TAB ---
     def setup_manage_users_tab(self):
         tab = self.manage_users_tab
-        tab.configure(fg_color=("#F5F5F5", "#333333"))
+        # tab.configure(fg_color=("#F5F5F5", "#2C2C2C")) # Example: Admin Tabs
 
         # Main frame for the tab
         main_frame = ctk.CTkFrame(tab, fg_color="transparent")
@@ -1504,7 +1507,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(actions_frame, text="Acciones para Usuario Seleccionado:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10) # SUBHEADING_FONT
 
         delete_icon = self.load_icon("close")
-        self.um_delete_button = ctk.CTkButton(actions_frame, text="Eliminar", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        self.um_delete_button = ctk.CTkButton(actions_frame, text="Eliminar", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color=("#D12D2D", "#D12D2D"), hover_color=("#B71C1C", "#B71C1C"), corner_radius=8) # Ensured BUTTON_FONT and corner_radius
         self.um_delete_button.pack(side="left", padx=5, pady=10)
 
         reset_pass_icon = self.load_icon("refresh")
@@ -1547,7 +1550,7 @@ class App(ctk.CTk):
         # Highlight the selected user in the list (visual feedback)
         for widget in self.user_list_scroll_frame.winfo_children():
             if hasattr(widget, "_user_id_ref") and widget._user_id_ref == user_id:
-                widget.configure(fg_color=("lightblue", "darkblue")) # Highlight color
+                widget.configure(fg_color=("#FADBD8", "#7B241C")) # Highlight color
             else:
                 # Reset others to default alternating colors or a standard non-highlight color
                 # This depends on how you set initial colors. For simplicity, using a fixed one here.
@@ -1556,7 +1559,7 @@ class App(ctk.CTk):
 
     def _create_user_item_frame_admin_tab(self, user_data, index):
         user_id = user_data['id']
-        original_bg = ("gray85", "gray20") if index % 2 == 0 else ("gray90", "gray25")
+        original_bg = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
 
         item_frame = ctk.CTkFrame(self.user_list_scroll_frame, corner_radius=5, fg_color=original_bg)
         item_frame.user_id = user_id  # Store id for reference
@@ -1584,7 +1587,7 @@ class App(ctk.CTk):
         user_id = user_data['id']
         frame.user_id = user_id # Update user_id
 
-        original_bg = ("gray85", "gray20") if index % 2 == 0 else ("gray90", "gray25")
+        original_bg = (("#FAFAFA", "#303030") if index % 2 == 0 else ("#F0F0F0", "#282828"))
         frame.original_bg = original_bg # Update original_bg
 
         # Determine current color (highlighted or original)
@@ -1644,7 +1647,7 @@ class App(ctk.CTk):
             if frame.winfo_exists():
                 frame.pack(fill="x", pady=(3,0), padx=5)
                 if frame.user_id == self.selected_user_id_manage_tab:
-                    frame.configure(fg_color=("lightblue", "darkblue")) # Apply highlight
+                    frame.configure(fg_color=("#FADBD8", "#7B241C")) # Apply highlight
                     found_selected_still_exists = True
                 # else: # No need to reset color here, _update already handled it or it's a new frame with original_bg
                     # frame.configure(fg_color=frame.original_bg) # this would undo highlight if selected was different
@@ -1736,7 +1739,7 @@ class App(ctk.CTk):
         }
         new_role_english = role_map.get(new_role_spanish.lower(), "student") # Default to student if mapping fails
 
-        success = student_manager.update_student_details_db(user_id, new_name, new_classroom, new_role_english)
+        success = student_manager.update_student_details_db(user_id, new_name, new_classroom_stripped, new_role_english)
 
         if success:
             messagebox.showinfo("Actualización Exitosa", f"Los detalles del usuario '{new_name}' (Rol: {new_role_spanish}) han sido actualizados.") # Translated, show Spanish role
@@ -1849,7 +1852,7 @@ class App(ctk.CTk):
     def setup_manage_classrooms_tab(self):
         self.selected_classroom_for_rename = None # Initialize instance variable
         tab = self.manage_classrooms_tab
-        tab.configure(fg_color=("#F5F5F5", "#333333")) # Neutral gray for admin tab
+        # tab.configure(fg_color=("#F5F5F5", "#2C2C2C")) # Example: Admin Tabs
 
         # Main content frame, splitting into two columns
         main_content_frame = ctk.CTkFrame(tab, fg_color="transparent")
@@ -1893,7 +1896,7 @@ class App(ctk.CTk):
 
         classrooms = student_manager.get_distinct_classrooms()
         if not classrooms:
-            ctk.CTkLabel(self.classrooms_list_frame, text="No hay clases definidas actualmente.").pack(pady=10) # Translated
+            ctk.CTkLabel(self.classrooms_list_frame, text="No hay clases definidas actualmente.", font=BODY_FONT).pack(pady=10) # Translated
             # Disable rename functionality if no classes
             if hasattr(self, 'rename_classroom_entry'): self.rename_classroom_entry.configure(state="disabled")
             if hasattr(self, 'rename_classroom_button'): self.rename_classroom_button.configure(state="disabled")
@@ -2056,7 +2059,7 @@ class App(ctk.CTk):
 
     def setup_leaderboard_tab(self):
        tab = self.leaderboard_tab # Use the instance variable for the tab
-       tab.configure(fg_color=("#E0F7FA", "#2C3E50")) # Example color, adjust as needed
+       # tab.configure(fg_color=("#FFFFFF", "#2C2C2C")) # Example: Manage Loans / Leaderboard
 
        # --- Controls Frame ---
        controls_frame = ctk.CTkFrame(tab, corner_radius=10)
@@ -2186,7 +2189,7 @@ class App(ctk.CTk):
             rank_label.pack(side="left", padx=(10,15), pady=10)
 
             if entry_icon:
-                icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="")
+                icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="", font=BODY_FONT)
                 icon_label.pack(side="left", padx=(0,10), pady=10)
 
             details_frame = ctk.CTkFrame(item_frame, fg_color="transparent") # Transparent to show item_frame color
