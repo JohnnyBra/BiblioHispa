@@ -69,7 +69,7 @@ class App(ctk.CTk):
 
         self.login_window = ctk.CTkToplevel(self)
         self.login_window.title("¡Hola Peque!") # Translated
-        self.login_window.geometry("450x580") # Adjusted window size
+        self.login_window.geometry("450x650") # Adjusted window size
         self.login_window.transient(self)
         self.login_window.grab_set()
         self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application)
@@ -142,10 +142,16 @@ class App(ctk.CTk):
         quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60") # Translated and ensured BUTTON_FONT
         quit_button.pack(side="left", padx=15) # Adjusted padding
 
-        # Creator Label
-        creator_label = ctk.CTkLabel(self.login_window, text="Creado por Javi Barrero", font=BODY_FONT, text_color=("black", "white"))
-        creator_label.pack(side="bottom", pady=(5, 5)) # Adjusted padding for bottom
-
+        # Creator Label (Debugging)
+        creator_label = ctk.CTkLabel(
+            self.login_window,
+            text="Creado por Javi Barrero",
+            font=BODY_FONT,
+            text_color=("black", "white"),
+            fg_color="yellow"  # Prominent background for debugging
+        )
+        creator_label.pack(side="bottom", pady=(5, 5), fill="x", expand=False)
+        creator_label.lift() # Or creator_label.tkraise()
         # Center the login window
         self.login_window.update_idletasks() # Update geometry
         x = self.winfo_screenwidth() // 2 - self.login_window.winfo_width() // 2
