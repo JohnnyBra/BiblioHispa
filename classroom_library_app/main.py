@@ -58,6 +58,24 @@ class App(ctk.CTk):
         self.selected_user_id_manage_tab = None
         self.icon_cache = {}
         self.login_window = None # Placeholder for the login window
+        self.book_item_frames = {}
+        self.no_books_label = None
+
+        # For refresh_student_list_ui (Gestionar Alumnos Tab)
+        self.student_item_frames = {}
+        self.no_students_label_manage_tab = None
+
+        # For refresh_user_list_ui (Gestionar Usuarios Admin Tab)
+        self.user_item_frames_admin_tab = {}
+        self.no_users_label_admin_tab = None
+
+        # For refresh_current_loans_list
+        self.loan_item_frames = {}
+        self.no_current_loans_label = None
+
+        # For refresh_reminders_list
+        self.reminder_item_frames = {}
+        self.no_reminders_label = None
 
         self.withdraw() # Hide main window initially
         self.show_login_screen() # Show login screen first
@@ -474,65 +492,124 @@ class App(ctk.CTk):
 
         self.refresh_book_list_ui()
 
-    def refresh_book_list_ui(self, books_to_display=None):
-        for widget in self.book_list_frame.winfo_children():
-            widget.destroy()
+    def _create_book_item_frame(self, book_data):
+        book_item_frame = ctk.CTkFrame(self.book_list_frame, corner_radius=6, border_width=1, border_color=("gray75", "gray30"))
+        book_item_frame.book_id = book_data['id'] # Store book_id here
+        book_item_frame.columnconfigure(1, weight=1)
 
-        ubicacion_val = self.view_ubicacion_filter.get() if hasattr(self, 'view_ubicacion_filter') else "Todos" # Changed variable name and default
+        available_count = book_manager.get_available_book_count(book_data['id'])
+        total_count = book_data.get('cantidad_total', 0)
+        availability_text = f"Disponible: {available_count} / {total_count}"
+        availability_color = "green" if available_count > 0 else "red"
+
+        # Store widgets in a dictionary on the frame for easy access in _update_book_item_frame_content
+        book_item_frame.widgets = {}
+
+        book_item_frame.widgets['status_label'] = ctk.CTkLabel(book_item_frame, text=availability_text, font=(APP_FONT_FAMILY, 12, "bold"), text_color=availability_color, anchor="e")
+        book_item_frame.widgets['status_label'].grid(row=0, column=2, padx=(5,10), pady=(5,0), sticky="ne")
+
+        book_item_frame.widgets['title_label'] = ctk.CTkLabel(book_item_frame, text=f"{book_data.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 16, "bold"), anchor="w")
+        book_item_frame.widgets['title_label'].grid(row=0, column=0, columnspan=2, padx=10, pady=(5,2), sticky="w")
+
+        book_item_frame.widgets['author_label'] = ctk.CTkLabel(book_item_frame, text=f"por {book_data.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 13, "italic"), anchor="w")
+        book_item_frame.widgets['author_label'].grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky="w")
+
+        info_text = f"Ubicación: {book_data.get('ubicacion', 'N/A')}"
+        if book_data.get('genero'):
+            info_text += f"  |  Género: {book_data.get('genero')}"
+        book_item_frame.widgets['info_label'] = ctk.CTkLabel(book_item_frame, text=info_text, font=(APP_FONT_FAMILY, 12), anchor="w")
+        book_item_frame.widgets['info_label'].grid(row=2, column=0, columnspan=3, padx=10, pady=(0,8), sticky="w")
+
+        lend_button_state = ctk.NORMAL if available_count > 0 else ctk.DISABLED
+        book_item_frame.widgets['lend_button'] = ctk.CTkButton(
+            book_item_frame,
+            text="Prestar",
+            font=BUTTON_FONT,
+            state=lend_button_state,
+            command=lambda b_id=book_data['id']: self.prompt_lend_book_from_view_tab(b_id), # Ensure correct book_id capture
+            corner_radius=6
+        )
+        book_item_frame.widgets['lend_button'].grid(row=3, column=0, columnspan=3, padx=10, pady=(5,10), sticky="ew")
+
+        return book_item_frame
+
+    def _update_book_item_frame_content(self, frame, book_data):
+        frame.book_id = book_data['id'] # Ensure book_id is up-to-date
+
+        available_count = book_manager.get_available_book_count(book_data['id'])
+        total_count = book_data.get('cantidad_total', 0)
+        availability_text = f"Disponible: {available_count} / {total_count}"
+        availability_color = "green" if available_count > 0 else "red"
+
+        frame.widgets['status_label'].configure(text=availability_text, text_color=availability_color)
+        frame.widgets['title_label'].configure(text=f"{book_data.get('titulo', 'N/A')}")
+        frame.widgets['author_label'].configure(text=f"por {book_data.get('autor', 'N/A')}")
+
+        info_text = f"Ubicación: {book_data.get('ubicacion', 'N/A')}"
+        if book_data.get('genero'):
+            info_text += f"  |  Género: {book_data.get('genero')}"
+        frame.widgets['info_label'].configure(text=info_text)
+
+        lend_button_state = ctk.NORMAL if available_count > 0 else ctk.DISABLED
+        frame.widgets['lend_button'].configure(state=lend_button_state, command=lambda b_id=book_data['id']: self.prompt_lend_book_from_view_tab(b_id))
+
+
+    def refresh_book_list_ui(self, books_to_display=None):
+        # For initial setup of no_books_label if it's None
+        if self.no_books_label is None and hasattr(self, 'book_list_frame'):
+            # Create it once, then show/hide
+            self.no_books_label = ctk.CTkLabel(self.book_list_frame, text="No se encontraron libros. Intenta cambiar los filtros o añadir nuevos libros.", font=BODY_FONT)
+            # Don't pack it yet, refresh logic will handle it.
+
+        ubicacion_val = self.view_ubicacion_filter.get() if hasattr(self, 'view_ubicacion_filter') else "Todos"
 
         if books_to_display is None:
-            books = book_manager.get_all_books_db(
-                ubicacion_filter=ubicacion_val if ubicacion_val != "Todos" else None # Changed "All" to "Todos"
+            books_data_list = book_manager.get_all_books_db(
+                ubicacion_filter=ubicacion_val if ubicacion_val != "Todos" else None
             )
         else:
-            books = books_to_display
+            books_data_list = books_to_display
 
-        if not books:
-            no_books_label = ctk.CTkLabel(self.book_list_frame, text="No se encontraron libros. Intenta cambiar los filtros o añadir nuevos libros.", font=BODY_FONT) # Translated
-            no_books_label.pack(pady=30, padx=10)
-            return
+        current_book_ids_to_display = {book['id'] for book in books_data_list}
+        existing_book_ids = set(self.book_item_frames.keys())
 
-        for i, book in enumerate(books):
-            book_item_frame = ctk.CTkFrame(self.book_list_frame, corner_radius=6, border_width=1, border_color=("gray75", "gray30"))
-            book_item_frame.pack(fill="x", pady=8, padx=8)
-            book_item_frame.columnconfigure(1, weight=1)
+        # Remove old book frames
+        for book_id_to_remove in existing_book_ids - current_book_ids_to_display:
+            frame_to_remove = self.book_item_frames.pop(book_id_to_remove)
+            frame_to_remove.destroy()
 
-            available_count = book_manager.get_available_book_count(book['id'])
-            total_count = book.get('cantidad_total', 0)
+        # Update existing and add new book frames
+        # We need to keep track of the order for packing
+        ordered_frames = []
+        for book_data in books_data_list:
+            book_id = book_data['id']
+            if book_id in self.book_item_frames:
+                frame = self.book_item_frames[book_id]
+                self._update_book_item_frame_content(frame, book_data)
+                ordered_frames.append(frame)
+            else:
+                new_frame = self._create_book_item_frame(book_data)
+                self.book_item_frames[book_id] = new_frame
+                ordered_frames.append(new_frame)
 
-            availability_text = f"Disponible: {available_count} / {total_count}"
-            availability_color = "green" if available_count > 0 else "red" # This color logic is fine
+        # Re-pack frames in the correct order
+        # First, forget all frames that are currently in book_list_frame and managed by book_item_frames
+        # This is to handle reordering correctly.
+        for book_id in self.book_item_frames:
+            self.book_item_frames[book_id].pack_forget()
 
-            status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(APP_FONT_FAMILY, 12, "bold"), text_color=availability_color, anchor="e") # Font updated
-            status_label.grid(row=0, column=2, padx=(5,10), pady=(5,0), sticky="ne")
+        # Then, pack the frames in the new order
+        for i, frame in enumerate(ordered_frames):
+            frame.pack(fill="x", pady=8, padx=8) # Re-pack in new order
 
-            title_label = ctk.CTkLabel(book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 16, "bold"), anchor="w") # Font updated
-            title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=(5,2), sticky="w")
+        # Handle "No books found" label
+        if not books_data_list:
+            if not self.no_books_label.winfo_ismapped(): # Check if already packed/visible
+                self.no_books_label.pack(pady=30, padx=10)
+        else:
+            if self.no_books_label.winfo_ismapped(): # Check if packed/visible
+                self.no_books_label.pack_forget()
 
-            author_label = ctk.CTkLabel(book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 13, "italic"), anchor="w") # Font updated
-            author_label.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky="w")
-
-            info_text = f"Ubicación: {book.get('ubicacion', 'N/A')}"
-            if book.get('genero'):
-                info_text += f"  |  Género: {book.get('genero')}"
-            info_label = ctk.CTkLabel(book_item_frame, text=info_text, font=(APP_FONT_FAMILY, 12), anchor="w")# Font updated
-            info_label.grid(row=2, column=0, columnspan=3, padx=10, pady=(0,8), sticky="w")
-
-            # Removed image_path display for now as it's not in the new schema
-
-            # --- Lend Button ---
-            available_count = book_manager.get_available_book_count(book['id'])
-            lend_button_state = ctk.NORMAL if available_count > 0 else ctk.DISABLED
-
-            lend_button = ctk.CTkButton(
-                book_item_frame,
-                text="Prestar",
-                font=BUTTON_FONT,
-                state=lend_button_state,
-                command=lambda b=book: self.prompt_lend_book_from_view_tab(b['id']),
-                corner_radius=6
-            )
-            lend_button.grid(row=3, column=0, columnspan=3, padx=10, pady=(5,10), sticky="ew")
 
     def search_books_ui(self):
         query = self.search_entry.get()
@@ -652,26 +729,78 @@ class App(ctk.CTk):
         else:
             messagebox.showerror("¡Oh No! 💔", "Algo salió mal al añadir el alumno. Revisa la consola.") # Translated
 
+    def _create_student_item_frame_manage_tab(self, student_data, index):
+        # Determine alternating color based on index
+        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=fg_color)
+        student_item_frame.student_id = student_data['id']
+        student_item_frame.widgets = {}
+
+        details = f"Nombre: {student_data['name']} ({student_data['role']}) - Puntos: {student_data.get('points', 0)}\nClase: {student_data['classroom']} | ID: {student_data['id']}"
+        student_item_frame.widgets['details_label'] = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w", font=BODY_FONT)
+        student_item_frame.widgets['details_label'].pack(pady=8, padx=10, fill="x", expand=True)
+
+        return student_item_frame
+
+    def _update_student_item_frame_content_manage_tab(self, frame, student_data, index):
+        frame.student_id = student_data['id'] # Update student_id just in case, though key shouldn't change
+        details = f"Nombre: {student_data['name']} ({student_data['role']}) - Puntos: {student_data.get('points', 0)}\nClase: {student_data['classroom']} | ID: {student_data['id']}"
+        frame.widgets['details_label'].configure(text=details)
+
+        # Update alternating color based on index
+        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        frame.configure(fg_color=fg_color)
+
+
     def refresh_student_list_ui(self):
         if not hasattr(self, 'students_list_frame'):
             return
 
-        for widget in self.students_list_frame.winfo_children():
-            widget.destroy()
+        # Initialize no_students_label_manage_tab if it's None
+        if self.no_students_label_manage_tab is None:
+            self.no_students_label_manage_tab = ctk.CTkLabel(self.students_list_frame, text="No se encontraron alumnos.", font=BODY_FONT)
+            # Don't pack it yet
 
-        students = student_manager.get_students_db()
+        students_data_list = student_manager.get_students_db() # Fetches all students
 
-        if not students:
-            no_students_label = ctk.CTkLabel(self.students_list_frame, text="No se encontraron alumnos.", font=BODY_FONT) # BODY_FONT
-            no_students_label.pack(pady=20, padx=10) # Adjusted padding
-            return
+        current_student_ids_to_display = {student['id'] for student in students_data_list}
+        existing_student_ids = set(self.student_item_frames.keys())
 
-        for i, student in enumerate(students):
-            student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15")) # Alternating colors are fine
-            student_item_frame.pack(fill="x", pady=4, padx=5) # Adjusted pady
-            details = f"Nombre: {student['name']} ({student['role']}) - Puntos: {student.get('points', 0)}\nClase: {student['classroom']} | ID: {student['id']}"
-            label = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w", font=BODY_FONT) # BODY_FONT
-            label.pack(pady=8, padx=10, fill="x", expand=True) # Adjusted pady
+        # Remove old student frames
+        for student_id_to_remove in existing_student_ids - current_student_ids_to_display:
+            frame_to_remove = self.student_item_frames.pop(student_id_to_remove)
+            frame_to_remove.destroy()
+
+        # Update existing and add new student frames
+        ordered_frames = []
+        for i, student_data in enumerate(students_data_list):
+            student_id = student_data['id']
+            if student_id in self.student_item_frames:
+                frame = self.student_item_frames[student_id]
+                self._update_student_item_frame_content_manage_tab(frame, student_data, i)
+                ordered_frames.append(frame)
+            else:
+                new_frame = self._create_student_item_frame_manage_tab(student_data, i)
+                self.student_item_frames[student_id] = new_frame
+                ordered_frames.append(new_frame)
+
+        # Re-pack frames in the correct order
+        for frame_id in list(self.student_item_frames.keys()): # Use list of keys if dict changes
+            if self.student_item_frames[frame_id].winfo_exists(): # Check if widget exists
+                 self.student_item_frames[frame_id].pack_forget()
+
+
+        for i, frame in enumerate(ordered_frames):
+            if frame.winfo_exists(): # Ensure frame wasn't destroyed if logic error
+                frame.pack(fill="x", pady=4, padx=5) # Re-pack in new order
+
+        # Handle "No students found" label
+        if not students_data_list:
+            if self.no_students_label_manage_tab and not self.no_students_label_manage_tab.winfo_ismapped():
+                self.no_students_label_manage_tab.pack(pady=20, padx=10)
+        else:
+            if self.no_students_label_manage_tab and self.no_students_label_manage_tab.winfo_ismapped():
+                self.no_students_label_manage_tab.pack_forget()
 
     def setup_manage_loans_tab(self):
         tab = self.manage_loans_tab
@@ -1008,91 +1137,251 @@ class App(ctk.CTk):
         else:
             messagebox.showerror("Error", "No se pudo extender el préstamo. Verifique la consola para más detalles.")
 
+    def _create_loan_item_frame(self, loan_data, index):
+        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        item_frame = ctk.CTkFrame(self.current_loans_frame, fg_color=fg_color)
+        item_frame.loan_id = loan_data['loan_id']
+        item_frame.widgets = {}
+
+        loan_date_str = loan_data.get('loan_date', 'N/A')
+        loan_date_display = 'N/A'
+        if loan_date_str != 'N/A':
+            try:
+                loan_date_dt = datetime.strptime(loan_date_str, '%Y-%m-%d')
+                loan_date_display = loan_date_dt.strftime('%d-%m-%Y')
+            except ValueError:
+                loan_date_display = loan_date_str
+
+        due_date_str = loan_data.get('due_date', 'N/A')
+        due_date_display = 'N/A'
+        if due_date_str != 'N/A':
+            try:
+                due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
+                due_date_display = due_date_dt.strftime('%d-%m-%Y')
+            except ValueError:
+                due_date_display = due_date_str
+
+        borrower_name = loan_data.get('borrower_name', 'Estudiante Desconocido')
+        details = f"Libro: {loan_data.get('titulo', 'N/A')} (Autor: {loan_data.get('autor', 'N/A')})\n" \
+                  f"Prestatario: {borrower_name}\n" \
+                  f"Prestado: {loan_date_display} | Vence: {due_date_display} (ID: {loan_data.get('loan_id', '')[:8]}...)"
+
+        item_frame.widgets['details_label'] = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", font=BODY_FONT)
+        item_frame.widgets['details_label'].pack(pady=8, padx=10, fill="x", expand=True)
+        return item_frame
+
+    def _update_loan_item_frame_content(self, frame, loan_data, index):
+        frame.loan_id = loan_data['loan_id']
+        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        frame.configure(fg_color=fg_color)
+
+        loan_date_str = loan_data.get('loan_date', 'N/A')
+        loan_date_display = 'N/A'
+        if loan_date_str != 'N/A':
+            try:
+                loan_date_dt = datetime.strptime(loan_date_str, '%Y-%m-%d')
+                loan_date_display = loan_date_dt.strftime('%d-%m-%Y')
+            except ValueError:
+                loan_date_display = loan_date_str
+
+        due_date_str = loan_data.get('due_date', 'N/A')
+        due_date_display = 'N/A'
+        if due_date_str != 'N/A':
+            try:
+                due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
+                due_date_display = due_date_dt.strftime('%d-%m-%Y')
+            except ValueError:
+                due_date_display = due_date_str
+
+        borrower_name = loan_data.get('borrower_name', 'Estudiante Desconocido')
+        details = f"Libro: {loan_data.get('titulo', 'N/A')} (Autor: {loan_data.get('autor', 'N/A')})\n" \
+                  f"Prestatario: {borrower_name}\n" \
+                  f"Prestado: {loan_date_display} | Vence: {due_date_display} (ID: {loan_data.get('loan_id', '')[:8]}...)"
+        frame.widgets['details_label'].configure(text=details)
+
+
     def refresh_current_loans_list(self):
-        for widget in self.current_loans_frame.winfo_children(): widget.destroy()
+        if not hasattr(self, 'current_loans_frame'): return
+
+        if self.no_current_loans_label is None:
+            self.no_current_loans_label = ctk.CTkLabel(self.current_loans_frame, text="", font=BODY_FONT) # Text will be set dynamically
 
         if not self.current_leader_classroom:
-             ctk.CTkLabel(self.current_loans_frame, text="Select a leader to view loans.").pack(pady=20, padx=10)
-             return
+            # Clear existing frames if any
+            for frame_id in list(self.loan_item_frames.keys()):
+                frame_to_remove = self.loan_item_frames.pop(frame_id)
+                if frame_to_remove.winfo_exists(): frame_to_remove.destroy()
 
-        # Use current_leader_classroom as ubicacion_filter
-        loans = book_manager.get_current_loans_db(ubicacion_filter=None)
-        if not loans:
-            ctk.CTkLabel(self.current_loans_frame, text=f"No books currently loaned out in {self.current_leader_classroom}.").pack(pady=20, padx=10)
+            self.no_current_loans_label.configure(text="Seleccione un líder para ver los préstamos.")
+            if not self.no_current_loans_label.winfo_ismapped():
+                self.no_current_loans_label.pack(pady=20, padx=10)
             return
 
-        for i, loan in enumerate(loans): # loan is now a dict from get_current_loans_db
-            item_frame = ctk.CTkFrame(self.current_loans_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
-            item_frame.pack(fill="x", pady=(2,0), padx=5)
+        # If leader is selected, hide the "select leader" message if it's showing
+        if self.no_current_loans_label.winfo_ismapped() and self.no_current_loans_label.cget("text") == "Seleccione un líder para ver los préstamos.":
+            self.no_current_loans_label.pack_forget()
 
-            loan_date_str = loan.get('loan_date', 'N/A')
-            loan_date_display = 'N/A'
-            if loan_date_str != 'N/A':
-                try:
-                    loan_date_dt = datetime.strptime(loan_date_str, '%Y-%m-%d')
-                    loan_date_display = loan_date_dt.strftime('%d-%m-%Y')
-                except ValueError:
-                    loan_date_display = loan_date_str # Fallback
 
-            due_date_str = loan.get('due_date', 'N/A')
-            due_date_display = 'N/A'
-            if due_date_str != 'N/A':
-                try:
-                    due_date_dt = datetime.strptime(due_date_str, '%Y-%m-%d')
-                    due_date_display = due_date_dt.strftime('%d-%m-%Y')
-                except ValueError:
-                    due_date_display = due_date_str # Fallback
+        loans_data_list = book_manager.get_current_loans_db(ubicacion_filter=None) # Filter by leader's class if necessary, or all for admin view
+        # Assuming loans for the current leader's classroom are desired here,
+        # The original code fetched all loans (ubicacion_filter=None) then displayed a label like "in {self.current_leader_classroom}"
+        # This might need adjustment if loans should be filtered by self.current_leader_classroom at DB level.
+        # For now, replicating existing logic of fetching all.
 
-            borrower_name = loan.get('borrower_name', 'Estudiante Desconocido')
+        current_loan_ids_to_display = {loan['loan_id'] for loan in loans_data_list}
+        existing_loan_ids = set(self.loan_item_frames.keys())
 
-            details = f"Libro: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
-                      f"Prestatario: {borrower_name}\n" \
-                      f"Prestado: {loan_date_display} | Vence: {due_date_display} (ID: {loan.get('loan_id', '')[:8]}...)"
-            label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", font=BODY_FONT) # BODY_FONT
-            label.pack(pady=8, padx=10, fill="x", expand=True) # Adjusted pady
+        for loan_id_to_remove in existing_loan_ids - current_loan_ids_to_display:
+            frame_to_remove = self.loan_item_frames.pop(loan_id_to_remove)
+            frame_to_remove.destroy()
 
-    def refresh_reminders_list(self):
-        for widget in self.reminders_frame.winfo_children(): widget.destroy()
+        ordered_frames = []
+        for i, loan_data in enumerate(loans_data_list):
+            loan_id = loan_data['loan_id']
+            if loan_id in self.loan_item_frames:
+                frame = self.loan_item_frames[loan_id]
+                self._update_loan_item_frame_content(frame, loan_data, i)
+                ordered_frames.append(frame)
+            else:
+                new_frame = self._create_loan_item_frame(loan_data, i)
+                self.loan_item_frames[loan_id] = new_frame
+                ordered_frames.append(new_frame)
 
-        if not self.current_leader_classroom:
-            ctk.CTkLabel(self.reminders_frame, text="Select a leader to view reminders.").pack(pady=20, padx=10)
-            return
+        for frame_id in list(self.loan_item_frames.keys()):
+            if self.loan_item_frames[frame_id].winfo_exists():
+                self.loan_item_frames[frame_id].pack_forget()
 
-        # Use current_leader_classroom as ubicacion_filter
-        due_soon_loans = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=None)
-        if not due_soon_loans:
-            ctk.CTkLabel(self.reminders_frame, text=f"No books due soon or overdue in {self.current_leader_classroom}.").pack(pady=20, padx=10)
-            return
+        for i, frame in enumerate(ordered_frames):
+            if frame.winfo_exists():
+                frame.pack(fill="x", pady=(2,0), padx=5)
+
+        if not loans_data_list:
+            self.no_current_loans_label.configure(text=f"No hay libros prestados actualmente en {self.current_leader_classroom}.")
+            if not self.no_current_loans_label.winfo_ismapped():
+                self.no_current_loans_label.pack(pady=20, padx=10)
+        else:
+            if self.no_current_loans_label.winfo_ismapped():
+                self.no_current_loans_label.pack_forget()
+
+
+    def _create_reminder_item_frame(self, reminder_data, index):
+        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        item_frame = ctk.CTkFrame(self.reminders_frame, fg_color=fg_color)
+        item_frame.loan_id = reminder_data['loan_id'] # Assuming 'loan_id' is present and unique for reminders
+        item_frame.widgets = {}
 
         today = datetime.now().date()
-        for i, book in enumerate(due_soon_loans): # Corrected variable name here
-            item_frame = ctk.CTkFrame(self.reminders_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
-            item_frame.pack(fill="x", pady=(2,0), padx=5)
+        due_date_str = reminder_data['due_date']
+        due_date_display = 'N/A'
+        is_overdue = False
+        if due_date_str != 'N/A':
+            try:
+                due_date_dt_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
+                due_date_display = due_date_dt_obj.strftime('%d-%m-%Y')
+                is_overdue = due_date_dt_obj.date() < today
+            except ValueError:
+                due_date_display = due_date_str
 
-            due_date_str = book['due_date']
-            due_date_display = 'N/A'
-            is_overdue = False # Default
-            if due_date_str != 'N/A':
-                try:
-                    due_date_dt_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
-                    due_date_display = due_date_dt_obj.strftime('%d-%m-%Y')
-                    is_overdue = due_date_dt_obj.date() < today
-                except ValueError:
-                    due_date_display = due_date_str # Fallback
+        borrower_name = reminder_data.get('borrower_name', 'Desconocido')
+        details = f"Libro: {reminder_data['titulo']}\n" \
+                  f"Prestatario: {borrower_name}\n" \
+                  f"Fecha Vencimiento: {due_date_display}"
+        if is_overdue: details += " (VENCIDO)"
 
-            borrower_name = book.get('borrower_name', 'Desconocido')
+        text_color_tuple = ("#D03030", "#E04040") if is_overdue else (None, None)
+        font_weight = "bold" if is_overdue else "normal"
 
-            details = f"Libro: {book['titulo']}\n" \
-                      f"Prestatario: {borrower_name}\n" \
-                      f"Fecha Vencimiento: {due_date_display}"
+        item_frame.widgets['details_label'] = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w",
+                                                           text_color=text_color_tuple[0] if ctk.get_appearance_mode().lower() == "light" else text_color_tuple[1],
+                                                           font=ctk.CTkFont(family=APP_FONT_FAMILY, size=BODY_FONT[1], weight=font_weight))
+        item_frame.widgets['details_label'].pack(pady=8, padx=10, fill="x", expand=True)
+        return item_frame
 
-            text_color = ("#D03030", "#E04040") if is_overdue else (None, None) # CustomTkinter default if None
-            font_weight = "bold" if is_overdue else "normal"
+    def _update_reminder_item_frame_content(self, frame, reminder_data, index):
+        frame.loan_id = reminder_data['loan_id']
+        fg_color = ("gray85", "gray17") if index % 2 == 0 else ("gray80", "gray15")
+        frame.configure(fg_color=fg_color)
 
-            if is_overdue: details += " (VENCIDO)"
+        today = datetime.now().date()
+        due_date_str = reminder_data['due_date']
+        due_date_display = 'N/A'
+        is_overdue = False
+        if due_date_str != 'N/A':
+            try:
+                due_date_dt_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
+                due_date_display = due_date_dt_obj.strftime('%d-%m-%Y')
+                is_overdue = due_date_dt_obj.date() < today
+            except ValueError:
+                due_date_display = due_date_str
 
-            label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", text_color=text_color[0] if ctk.get_appearance_mode().lower() == "light" else text_color[1], font=ctk.CTkFont(family=APP_FONT_FAMILY, size=BODY_FONT[1], weight=font_weight)) # BODY_FONT size, custom weight
-            label.pack(pady=8, padx=10, fill="x", expand=True) # Adjusted pady
+        borrower_name = reminder_data.get('borrower_name', 'Desconocido')
+        details = f"Libro: {reminder_data['titulo']}\n" \
+                  f"Prestatario: {borrower_name}\n" \
+                  f"Fecha Vencimiento: {due_date_display}"
+        if is_overdue: details += " (VENCIDO)"
+
+        text_color_tuple = ("#D03030", "#E04040") if is_overdue else (None, None)
+        font_weight = "bold" if is_overdue else "normal"
+
+        frame.widgets['details_label'].configure(text=details,
+                                                 text_color=text_color_tuple[0] if ctk.get_appearance_mode().lower() == "light" else text_color_tuple[1],
+                                                 font=ctk.CTkFont(family=APP_FONT_FAMILY, size=BODY_FONT[1], weight=font_weight))
+
+    def refresh_reminders_list(self):
+        if not hasattr(self, 'reminders_frame'): return
+
+        if self.no_reminders_label is None:
+            self.no_reminders_label = ctk.CTkLabel(self.reminders_frame, text="", font=BODY_FONT)
+
+        if not self.current_leader_classroom:
+            for frame_id in list(self.reminder_item_frames.keys()):
+                frame_to_remove = self.reminder_item_frames.pop(frame_id)
+                if frame_to_remove.winfo_exists(): frame_to_remove.destroy()
+
+            self.no_reminders_label.configure(text="Seleccione un líder para ver los recordatorios.")
+            if not self.no_reminders_label.winfo_ismapped():
+                self.no_reminders_label.pack(pady=20, padx=10)
+            return
+
+        if self.no_reminders_label.winfo_ismapped() and self.no_reminders_label.cget("text") == "Seleccione un líder para ver los recordatorios.":
+            self.no_reminders_label.pack_forget()
+
+        reminders_data_list = book_manager.get_books_due_soon_db(days_threshold=7, ubicacion_filter=None) # Similar to loans, fetched all.
+
+        current_reminder_loan_ids = {reminder['loan_id'] for reminder in reminders_data_list} # Keyed by loan_id
+        existing_reminder_loan_ids = set(self.reminder_item_frames.keys())
+
+        for loan_id_to_remove in existing_reminder_loan_ids - current_reminder_loan_ids:
+            frame_to_remove = self.reminder_item_frames.pop(loan_id_to_remove)
+            frame_to_remove.destroy()
+
+        ordered_frames = []
+        for i, reminder_data in enumerate(reminders_data_list):
+            loan_id = reminder_data['loan_id']
+            if loan_id in self.reminder_item_frames:
+                frame = self.reminder_item_frames[loan_id]
+                self._update_reminder_item_frame_content(frame, reminder_data, i)
+                ordered_frames.append(frame)
+            else:
+                new_frame = self._create_reminder_item_frame(reminder_data, i)
+                self.reminder_item_frames[loan_id] = new_frame
+                ordered_frames.append(new_frame)
+
+        for frame_id in list(self.reminder_item_frames.keys()):
+            if self.reminder_item_frames[frame_id].winfo_exists():
+                self.reminder_item_frames[frame_id].pack_forget()
+
+        for i, frame in enumerate(ordered_frames):
+            if frame.winfo_exists():
+                frame.pack(fill="x", pady=(2,0), padx=5)
+
+        if not reminders_data_list:
+            self.no_reminders_label.configure(text=f"No hay libros próximos a vencer o vencidos en {self.current_leader_classroom}.")
+            if not self.no_reminders_label.winfo_ismapped():
+                self.no_reminders_label.pack(pady=20, padx=10)
+        else:
+            if self.no_reminders_label.winfo_ismapped():
+                self.no_reminders_label.pack_forget()
 
     # --- USER MANAGEMENT TAB ---
     def setup_manage_users_tab(self):
@@ -1265,63 +1554,118 @@ class App(ctk.CTk):
                 original_color = widget._original_bg if hasattr(widget, "_original_bg") else ("gray85", "gray17") # Fallback
                 widget.configure(fg_color=original_color)
 
+    def _create_user_item_frame_admin_tab(self, user_data, index):
+        user_id = user_data['id']
+        original_bg = ("gray85", "gray20") if index % 2 == 0 else ("gray90", "gray25")
+
+        item_frame = ctk.CTkFrame(self.user_list_scroll_frame, corner_radius=5, fg_color=original_bg)
+        item_frame.user_id = user_id  # Store id for reference
+        item_frame.original_bg = original_bg # Store original color
+        item_frame.widgets = {}
+
+        role_display_map = {"student": "alumno", "leader": "líder", "admin": "admin"}
+        display_role = role_display_map.get(user_data['role'], user_data['role'])
+        details_text = f"👤 {user_data['name']} ({display_role}) - Puntos: {user_data.get('points', 0)} - 🏫 {user_data['classroom']}"
+
+        item_frame.widgets['id_label'] = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 11, "italic"), text_color="gray")
+        item_frame.widgets['id_label'].pack(side="right", padx=(0,10), pady=2)
+
+        item_frame.widgets['details_label'] = ctk.CTkLabel(item_frame, text=details_text, font=BODY_FONT, anchor="w")
+        item_frame.widgets['details_label'].pack(side="left", padx=10, pady=10, fill="x", expand=True)
+
+        # Bind click events
+        item_frame.bind("<Button-1>", lambda event, uid=user_id, udata=user_data: self.select_user_for_management(uid, udata))
+        item_frame.widgets['details_label'].bind("<Button-1>", lambda event, uid=user_id, udata=user_data: self.select_user_for_management(uid, udata))
+        # item_frame.widgets['id_label'].bind("<Button-1>", lambda event, uid=user_id, udata=user_data: self.select_user_for_management(uid, udata)) # Optional: bind id_label too
+
+        return item_frame
+
+    def _update_user_item_frame_content_admin_tab(self, frame, user_data, index):
+        user_id = user_data['id']
+        frame.user_id = user_id # Update user_id
+
+        original_bg = ("gray85", "gray20") if index % 2 == 0 else ("gray90", "gray25")
+        frame.original_bg = original_bg # Update original_bg
+
+        # Determine current color (highlighted or original)
+        current_fg_color = frame.cget("fg_color")
+        is_selected = (self.selected_user_id_manage_tab == user_id)
+
+        if not is_selected: # Only change to original_bg if not selected
+             frame.configure(fg_color=original_bg)
+        # If it is selected, it should retain its highlight color, which will be reapplied later if needed anyway
+
+        role_display_map = {"student": "alumno", "leader": "líder", "admin": "admin"}
+        display_role = role_display_map.get(user_data['role'], user_data['role'])
+        details_text = f"👤 {user_data['name']} ({display_role}) - Puntos: {user_data.get('points', 0)} - 🏫 {user_data['classroom']}"
+
+        frame.widgets['id_label'].configure(text=f"ID: {user_id[:8]}...")
+        frame.widgets['details_label'].configure(text=details_text)
+
+        # Re-bind click events as commands might hold old user_data if not careful with lambdas (though here it seems okay)
+        # This is more of a safeguard or if the lambda structure was more complex.
+        frame.bind("<Button-1>", lambda event, uid=user_id, udata=user_data: self.select_user_for_management(uid, udata))
+        frame.widgets['details_label'].bind("<Button-1>", lambda event, uid=user_id, udata=user_data: self.select_user_for_management(uid, udata))
 
     def refresh_user_list_ui(self):
         if not hasattr(self, 'user_list_scroll_frame'): return
-        for widget in self.user_list_scroll_frame.winfo_children():
-            widget.destroy()
 
-        users = student_manager.get_students_db()
-        if not users:
-            ctk.CTkLabel(self.user_list_scroll_frame, text="No hay usuarios en el sistema.", font=BODY_FONT).pack(pady=20) # Translated
-            return
+        if self.no_users_label_admin_tab is None:
+            self.no_users_label_admin_tab = ctk.CTkLabel(self.user_list_scroll_frame, text="No hay usuarios en el sistema.", font=BODY_FONT)
 
-        for i, user in enumerate(users):
-            user_id = user['id']
-            original_bg = ("gray85", "gray20") if i % 2 == 0 else ("gray90", "gray25")
-            item_frame = ctk.CTkFrame(self.user_list_scroll_frame, corner_radius=5, fg_color=original_bg)
-            item_frame.pack(fill="x", pady=(3,0), padx=5)
-            item_frame._user_id_ref = user_id # Store id for reference
-            item_frame._original_bg = original_bg # Store original color for de-selection
+        users_data_list = student_manager.get_students_db()
 
-            # User details
-            role_display_map = {
-                "student": "alumno",
-                "leader": "líder",
-                "admin": "admin"
-            }
-            display_role = role_display_map.get(user['role'], user['role']) # Fallback to original if no map found
-            details_text = f"👤 {user['name']} ({display_role}) - Puntos: {user.get('points', 0)} - 🏫 {user['classroom']}"
+        current_user_ids_to_display = {user['id'] for user in users_data_list}
+        existing_user_ids = set(self.user_item_frames_admin_tab.keys())
 
-            id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 11, "italic"), text_color="gray") # Adjusted font size slightly
-            id_label.pack(side="right", padx=(0,10), pady=2)
+        for user_id_to_remove in existing_user_ids - current_user_ids_to_display:
+            frame_to_remove = self.user_item_frames_admin_tab.pop(user_id_to_remove)
+            frame_to_remove.destroy()
 
-            label = ctk.CTkLabel(item_frame, text=details_text, font=BODY_FONT, anchor="w") # Ensured BODY_FONT
-            label.pack(side="left", padx=10, pady=10, fill="x", expand=True) # Adjusted pady
+        ordered_frames = []
+        for i, user_data in enumerate(users_data_list):
+            user_id = user_data['id']
+            if user_id in self.user_item_frames_admin_tab:
+                frame = self.user_item_frames_admin_tab[user_id]
+                self._update_user_item_frame_content_admin_tab(frame, user_data, i)
+                ordered_frames.append(frame)
+            else:
+                new_frame = self._create_user_item_frame_admin_tab(user_data, i)
+                self.user_item_frames_admin_tab[user_id] = new_frame
+                ordered_frames.append(new_frame)
 
-            # Make the frame clickable
-            # Using lambda with default argument to capture current user_id and user data for the callback
-            item_frame.bind("<Button-1>", lambda event, uid=user_id, udata=user: self.select_user_for_management(uid, udata))
-            label.bind("<Button-1>", lambda event, uid=user_id, udata=user: self.select_user_for_management(uid, udata))
-            # id_label.bind("<Button-1>", lambda event, uid=user_id, udata=user: self.select_user_for_management(uid, udata))
+        # Re-pack, handling order and selection highlight
+        for frame_id in list(self.user_item_frames_admin_tab.keys()):
+             if self.user_item_frames_admin_tab[frame_id].winfo_exists():
+                self.user_item_frames_admin_tab[frame_id].pack_forget()
 
+        found_selected_still_exists = False
+        for i, frame in enumerate(ordered_frames):
+            if frame.winfo_exists():
+                frame.pack(fill="x", pady=(3,0), padx=5)
+                if frame.user_id == self.selected_user_id_manage_tab:
+                    frame.configure(fg_color=("lightblue", "darkblue")) # Apply highlight
+                    found_selected_still_exists = True
+                # else: # No need to reset color here, _update already handled it or it's a new frame with original_bg
+                    # frame.configure(fg_color=frame.original_bg) # this would undo highlight if selected was different
 
-        # After refresh, ensure selection state is consistent
-        if not self.selected_user_id_manage_tab:
-            self.um_delete_button.configure(state="disabled")
-            self.um_reset_password_button.configure(state="disabled")
-            self.um_update_user_button.configure(state="disabled", text="Actualizar Usuario Seleccionado") # Translated
-            self.um_add_user_button.configure(state="normal")
+        if not users_data_list:
+            if not self.no_users_label_admin_tab.winfo_ismapped():
+                self.no_users_label_admin_tab.pack(pady=20)
         else:
-            # Re-highlight if selected user is still in the list
-            found_selected = False
-            for widget in self.user_list_scroll_frame.winfo_children():
-                 if hasattr(widget, "_user_id_ref") and widget._user_id_ref == self.selected_user_id_manage_tab:
-                    widget.configure(fg_color=("lightblue", "darkblue"))
-                    found_selected = True
-                    break
-            if not found_selected: # Selected user might have been deleted
-                self.clear_user_form_ui(clear_selection=True)
+            if self.no_users_label_admin_tab.winfo_ismapped():
+                self.no_users_label_admin_tab.pack_forget()
+
+        # After refresh, ensure selection state of buttons is consistent
+        if not self.selected_user_id_manage_tab or not found_selected_still_exists:
+            self.clear_user_form_ui(clear_selection=True) # This will disable buttons and clear selection
+        else:
+            # If selected user still exists, ensure buttons reflect that state (they should already from select_user_for_management)
+            # This part might be redundant if select_user_for_management is the only way to set selected_user_id_manage_tab
+            self.um_delete_button.configure(state="normal")
+            self.um_reset_password_button.configure(state="normal")
+            # Text for update button is handled by select_user_for_management
+            self.um_add_user_button.configure(state="disabled")
 
 
     def add_user_ui(self):

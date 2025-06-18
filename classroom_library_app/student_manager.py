@@ -325,67 +325,95 @@ def import_students_from_csv(file_path, classroom_name):
     """
     success_count = 0
     errors = []
+    students_to_insert = []
+    conn = None
 
     if not classroom_name or not classroom_name.strip():
         errors.append("Classroom name cannot be empty.")
-        return success_count, errors
+        return 0, errors
 
     try:
-        with open(file_path, mode='r', newline='', encoding='utf-8') as csvfile:
+        with open(file_path, mode='r', newline='', encoding='utf-8-sig') as csvfile: # Added utf-8-sig
             csv_reader = csv.reader(csvfile)
-            header = next(csv_reader, None) # Skip header row if it exists
+            try:
+                header = next(csv_reader, None) # Skip header row if it exists
+            except StopIteration: # Handles empty file
+                errors.append("El archivo CSV está vacío.")
+                return 0, errors
 
-            for row_num, row in enumerate(csv_reader, start=1): # Start row_num at 1 for user messages
+            for row_num, row in enumerate(csv_reader, start=2 if header else 1): # Adjust start_num based on header
                 try:
                     last_name_str = None
                     first_name_str = None
 
-                    if not row: # Handle completely empty rows
-                        errors.append(f"Row {row_num}: Empty row.")
+                    if not row:
+                        errors.append(f"Fila {row_num}: Fila vacía.")
                         continue
 
                     if len(row) == 1:
-                        # csv.reader handles unquoting. If a field was quoted and contained a comma,
-                        # it will still be a single element in `row` after initial parsing.
                         content = row[0].strip()
-                        parts = content.split(',', 1)  # Split only on the first comma
+                        parts = content.split(',', 1)
                         if len(parts) == 2:
                             last_name_str = parts[0].strip()
                             first_name_str = parts[1].strip()
                         else:
-                            # Single field that doesn't contain "lastname,firstname"
-                            errors.append(f"Row {row_num}: Malformed data (single field does not contain 'lastname,firstname'): '{row[0]}'")
+                            errors.append(f"Fila {row_num}: Dato malformado (campo único no contiene 'apellido,nombre'): '{row[0]}'")
                             continue
                     elif len(row) == 2:
                         last_name_str = row[0].strip()
                         first_name_str = row[1].strip()
-                    else: # len(row) is 0 (already handled by 'if not row') or > 2
-                        errors.append(f"Row {row_num}: Malformed data (expected 1 or 2 fields per row after CSV parsing, got {len(row)}): '{','.join(row)}'")
+                    else:
+                        errors.append(f"Fila {row_num}: Dato malformado (se esperaban 1 o 2 campos, se obtuvieron {len(row)}): '{','.join(row)}'")
                         continue
 
-                    # Check if names are empty after stripping
                     if not last_name_str or not first_name_str:
-                        errors.append(f"Row {row_num}: Missing first or last name after parsing. Original content: '{','.join(row)}'")
+                        errors.append(f"Fila {row_num}: Falta nombre o apellido después del análisis. Contenido original: '{','.join(row)}'")
                         continue
 
                     full_name = f"{first_name_str} {last_name_str}".strip()
-                    if not full_name: # Should be caught by the above, but as a safeguard
-                        errors.append(f"Row {row_num}: Resulting full name is empty. Original content: '{','.join(row)}'")
+                    if not full_name:
+                        errors.append(f"Fila {row_num}: El nombre completo resultante está vacío. Contenido original: '{','.join(row)}'")
                         continue
 
-                    student_id = add_student_db(name=full_name, classroom=classroom_name, password=None, role='student')
-                    if student_id:
-                        success_count += 1
-                    else:
-                        errors.append(f"Row {row_num}: Failed to add student '{full_name}' to database.")
-                except IndexError: # Should be caught by len(row) < 2, but as an additional safeguard
-                    errors.append(f"Row {row_num}: Malformed data (likely missing fields). Content: '{','.join(row)}'")
-                except Exception as e: # Catch any other unexpected errors during row processing
-                    errors.append(f"Row {row_num}: An unexpected error occurred: {e}. Content: '{','.join(row)}'")
+                    # Generate student ID here, password fields will be None
+                    student_id = generate_student_id()
+                    students_to_insert.append((student_id, full_name, classroom_name.strip(), 'student', None, None))
+
+                except IndexError:
+                    errors.append(f"Fila {row_num}: Dato malformado (probablemente faltan campos). Contenido: '{','.join(row)}'")
+                except Exception as e:
+                    errors.append(f"Fila {row_num}: Ocurrió un error inesperado: {e}. Contenido: '{','.join(row)}'")
+
+        if not students_to_insert:
+            if not errors: # No students to insert and no errors means empty valid CSV or all rows skipped
+                 errors.append("No se encontraron alumnos válidos para importar en el archivo CSV.")
+            return 0, errors
+
+        conn = sqlite3.connect(_get_resolved_db_path())
+        cursor = conn.cursor()
+        conn.execute("BEGIN TRANSACTION;")
+
+        try:
+            cursor.executemany("""
+                INSERT INTO students (id, name, classroom, role, hashed_password, salt)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, students_to_insert)
+            conn.commit()
+            success_count = len(students_to_insert)
+        except sqlite3.Error as e:
+            conn.rollback()
+            errors.append(f"Error de base de datos durante la inserción en lote: {e}. No se importaron alumnos en este lote.")
+            return 0, errors # Return 0 successful imports for this batch on DB error
+
     except FileNotFoundError:
-        errors.append(f"Error: The file '{file_path}' was not found.")
-    except Exception as e: # Catch other errors like permission issues
-        errors.append(f"An unexpected error occurred while opening or reading the file: {e}")
+        errors.append(f"Error: No se encontró el archivo '{file_path}'.")
+    except Exception as e:
+        errors.append(f"Ocurrió un error inesperado durante la importación del CSV: {e}")
+        if conn: # If connection was established before this generic error
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
 
     return success_count, errors
 
