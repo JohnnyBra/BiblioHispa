@@ -1707,10 +1707,10 @@ class App(ctk.CTk):
 
         entry_icon = self.load_icon("students", size=(24,24))
 
-        gold_color = ("#FFF9C4", "#534B0C")
-        silver_color = ("#F5F5F5", "#424242")
-        bronze_color = ("#FFE0B2", "#6D4C41")
-        default_item_color = ("#FFFFFF", "#2B2B2B") # Assuming a default or use theme's default
+        gold_color = ("#FFD700", "#B8860B")    # Updated Gold
+        silver_color = ("#E0E0E0", "#A0A0A0")  # Updated Silver
+        bronze_color = ("#CD7F32", "#8C581E")  # Updated Bronze
+        default_item_color = ("#FFFFFF", "#2B2B2B") # Verified: Remains as specified
 
         for i, student in enumerate(students_data):
             rank = i + 1
