@@ -100,18 +100,19 @@ class App(ctk.CTk):
             ctk.CTkLabel(self.login_window, text="[Error al cargar imagen]", font=BODY_FONT).pack(pady=(20,10))
 
 
-        ctk.CTkLabel(self.login_window, text="¡Bienvenido/a a Biblio Diversión!", font=HEADING_FONT).pack(pady=(10, 20)) # Translated, adjusted padding
+        ctk.CTkLabel(self.login_window, text="Bienvenidos a LEERFLIX", font=HEADING_FONT).pack(pady=(10, 20)) # Changed text
 
         frame = ctk.CTkFrame(self.login_window, fg_color="#E0F2F1") # Added fg_color
         frame.pack(pady=10, padx=30, fill="x") # Adjusted padding
+        frame.columnconfigure(1, weight=1) # Allow entry column to expand if needed
 
         ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
-        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=250, placeholder_text="Nombre de usuario") # Translated placeholder, adjusted width
-        username_entry.grid(row=0, column=1, padx=10, pady=10) # Adjusted padding
+        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=200, placeholder_text="Nombre de usuario") # Translated placeholder, adjusted width
+        username_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew") # Adjusted padding and sticky
 
         ctk.CTkLabel(frame, text="Contraseña:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
-        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=250, placeholder_text="Contraseña") # Translated placeholder, adjusted width
-        password_entry.grid(row=1, column=1, padx=10, pady=10) # Adjusted padding
+        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=200, placeholder_text="Contraseña") # Translated placeholder, adjusted width
+        password_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew") # Adjusted padding and sticky
 
         # Give focus to username entry initially
         username_entry.focus()
@@ -160,21 +161,26 @@ class App(ctk.CTk):
         header_frame.pack(pady=(10, 5), padx=15, fill="x")
 
         try:
-            logo_path_str = os.path.join('assets', 'Leerflix logo.jpg')
+            logo_path_str = os.path.join('assets', 'leerflix logo ancho.jpg') # Changed filename
             logo_path = get_data_path(logo_path_str)
             if os.path.exists(logo_path):
                 img = Image.open(logo_path)
-                # Adjust size for header - e.g., height 60, scale width
+                # Adjust size for header
                 original_width, original_height = img.size
-                desired_height = 60
+                desired_height = 80  # Increased target height
                 aspect_ratio = original_width / original_height
                 desired_width = int(desired_height * aspect_ratio)
 
                 # Ensure width is not excessively large for the window
-                max_header_width = 800 # Max width for the logo in header
+                max_header_width = 900 # Increased max_header_width
                 if desired_width > max_header_width:
                     desired_width = max_header_width
+                    # Recalculate height to maintain aspect ratio if width is capped
                     desired_height = int(desired_width / aspect_ratio)
+
+                # It's good practice to ensure desired_height is at least 1px if capping width leads to 0
+                if desired_height < 1: desired_height = 1
+
 
                 img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
                 ctk_logo_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
