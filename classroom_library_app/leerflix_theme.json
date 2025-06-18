@@ -20,7 +20,8 @@
   },
   "CTkLabel": {
     "fg_color": "transparent",
-    "text_color": ["#202020", "#E0E0E0"]
+    "text_color": ["#202020", "#E0E0E0"],
+    "corner_radius": 0
   },
   "CTkEntry": {
     "fg_color": ["#FAFAFA", "#333333"],
