@@ -134,7 +134,7 @@ class App(ctk.CTk):
                 username_entry.focus()
 
         button_frame = ctk.CTkFrame(self.login_window, fg_color="transparent")
-        button_frame.pack(pady=15) # Adjusted padding
+        button_frame.pack(pady=(15, 5)) # Adjusted padding
 
         login_button = ctk.CTkButton(button_frame, text="Acceder", font=BUTTON_FONT, command=login_action) # Translated and ensured BUTTON_FONT
         login_button.pack(side="left", padx=15) # Adjusted padding
