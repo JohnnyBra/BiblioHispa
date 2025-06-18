@@ -158,7 +158,8 @@
       "#E53935",
       "#E53935"
     ],
-    "corner_radius": 8
+    "corner_radius": 8,
+    "border_spacing": 4
   },
   "CTkScrollableFrame": {
     "label_fg_color": [
