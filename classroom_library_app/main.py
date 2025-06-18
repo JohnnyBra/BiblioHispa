@@ -110,7 +110,7 @@ class App(ctk.CTk):
                 desired_height = 150 # Adjust this based on actual image aspect ratio
                 img_resized = img.resize((desired_width, desired_height), Image.LANCZOS)
                 ctk_image = ctk.CTkImage(light_image=img_resized, dark_image=img_resized, size=(desired_width, desired_height))
-                image_label = ctk.CTkLabel(self.login_window, image=ctk_image, text="")
+                image_label = ctk.CTkLabel(self.login_window, image=ctk_image, text="", font=BODY_FONT)
                 image_label.pack(pady=(15, 5)) # Padding top and bottom
             else:
                 print(f"Login screen image not found at {image_path}")
@@ -215,7 +215,7 @@ class App(ctk.CTk):
                 main_img_resized = main_img.resize((desired_width, desired_height), Image.LANCZOS)
                 ctk_main_logo_image = ctk.CTkImage(light_image=main_img_resized, dark_image=main_img_resized, size=(desired_width, desired_height))
 
-                main_logo_label = ctk.CTkLabel(header_frame, image=ctk_main_logo_image, text="")
+                main_logo_label = ctk.CTkLabel(header_frame, image=ctk_main_logo_image, text="", font=BODY_FONT)
                 main_logo_label.pack(side="left", padx=(0, 10), pady=5) # Pack to the left
 
             else:
@@ -235,7 +235,7 @@ class App(ctk.CTk):
                 small_img_resized = small_img.resize((s_desired_width, s_desired_height), Image.LANCZOS)
                 ctk_small_logo_image = ctk.CTkImage(light_image=small_img_resized, dark_image=small_img_resized, size=(s_desired_width, s_desired_height))
 
-                small_logo_label = ctk.CTkLabel(header_frame, image=ctk_small_logo_image, text="")
+                small_logo_label = ctk.CTkLabel(header_frame, image=ctk_small_logo_image, text="", font=BODY_FONT)
                 small_logo_label.pack(side="right", padx=(10, 0), pady=5) # Pack to the right
             else:
                 print(f"Small logo image 'logo.png' not found at {small_logo_path}")
@@ -882,8 +882,8 @@ class App(ctk.CTk):
 
         current_loans_tab = loans_display_tabview.add("Préstamos Actuales") # Translated
         reminders_tab = loans_display_tabview.add("⏰ Recordatorios") # Translated
-        current_loans_tab.configure(fg_color=("#F5F5F5", "#343638"))
-        reminders_tab.configure(fg_color=("#FFF0F5", "#383436"))
+        # current_loans_tab.configure(fg_color=...) # Using theme default
+        # reminders_tab.configure(fg_color=...) # Using theme default
 
 
         self.current_loans_label = ctk.CTkLabel(current_loans_tab, text="Préstamos Actuales en [Clase del Líder]", font=SUBHEADING_FONT) # Ensured SUBHEADING_FONT
@@ -957,9 +957,9 @@ class App(ctk.CTk):
 
 
         for widget in self.current_loans_frame.winfo_children(): widget.destroy()
-        ctk.CTkLabel(self.current_loans_frame, text="Por favor, seleccione un líder estudiantil para gestionar préstamos.").pack(pady=20, padx=10) # Translated
+        ctk.CTkLabel(self.current_loans_frame, text="Por favor, seleccione un líder estudiantil para gestionar préstamos.", font=BODY_FONT).pack(pady=20, padx=10) # Translated
         for widget in self.reminders_frame.winfo_children(): widget.destroy()
-        ctk.CTkLabel(self.reminders_frame, text="Por favor, seleccione un líder estudiantil para ver recordatorios.").pack(pady=20, padx=10) # Translated
+        ctk.CTkLabel(self.reminders_frame, text="Por favor, seleccione un líder estudiantil para ver recordatorios.", font=BODY_FONT).pack(pady=20, padx=10) # Translated
 
     def refresh_loan_related_combos_and_lists(self):
         if not self.current_leader_id or not self.current_leader_classroom: # current_leader_classroom is the ubicacion
@@ -1647,7 +1647,7 @@ class App(ctk.CTk):
             if frame.winfo_exists():
                 frame.pack(fill="x", pady=(3,0), padx=5)
                 if frame.user_id == self.selected_user_id_manage_tab:
-                    frame.configure(fg_color=("lightblue", "darkblue")) # Apply highlight
+                    frame.configure(fg_color=("#FADBD8", "#7B241C")) # Apply highlight
                     found_selected_still_exists = True
                 # else: # No need to reset color here, _update already handled it or it's a new frame with original_bg
                     # frame.configure(fg_color=frame.original_bg) # this would undo highlight if selected was different
@@ -1739,7 +1739,7 @@ class App(ctk.CTk):
         }
         new_role_english = role_map.get(new_role_spanish.lower(), "student") # Default to student if mapping fails
 
-        success = student_manager.update_student_details_db(user_id, new_name, new_classroom, new_role_english)
+        success = student_manager.update_student_details_db(user_id, new_name, new_classroom_stripped, new_role_english)
 
         if success:
             messagebox.showinfo("Actualización Exitosa", f"Los detalles del usuario '{new_name}' (Rol: {new_role_spanish}) han sido actualizados.") # Translated, show Spanish role
@@ -1896,7 +1896,7 @@ class App(ctk.CTk):
 
         classrooms = student_manager.get_distinct_classrooms()
         if not classrooms:
-            ctk.CTkLabel(self.classrooms_list_frame, text="No hay clases definidas actualmente.").pack(pady=10) # Translated
+            ctk.CTkLabel(self.classrooms_list_frame, text="No hay clases definidas actualmente.", font=BODY_FONT).pack(pady=10) # Translated
             # Disable rename functionality if no classes
             if hasattr(self, 'rename_classroom_entry'): self.rename_classroom_entry.configure(state="disabled")
             if hasattr(self, 'rename_classroom_button'): self.rename_classroom_button.configure(state="disabled")
@@ -2189,7 +2189,7 @@ class App(ctk.CTk):
             rank_label.pack(side="left", padx=(10,15), pady=10)
 
             if entry_icon:
-                icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="")
+                icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="", font=BODY_FONT)
                 icon_label.pack(side="left", padx=(0,10), pady=10)
 
             details_frame = ctk.CTkFrame(item_frame, fg_color="transparent") # Transparent to show item_frame color
