@@ -12,13 +12,13 @@ from utils import get_data_path # Import the helper
 
 # --- Global Styling & Theme ---
 ctk.set_appearance_mode("Light")  # Options: "System" (default), "Dark", "Light"
-ctk.set_default_color_theme("blue") # Options: "blue" (default), "green", "dark-blue"
+ctk.set_default_color_theme("green") # Options: "blue" (default), "green", "dark-blue"
 
-APP_FONT_FAMILY = "Arial" # A common sans-serif font
-HEADING_FONT = (APP_FONT_FAMILY, 18, "bold")
-SUBHEADING_FONT = (APP_FONT_FAMILY, 15, "bold")
-BODY_FONT = (APP_FONT_FAMILY, 12)
-BUTTON_FONT = (APP_FONT_FAMILY, 12, "bold")
+APP_FONT_FAMILY = "Comic Sans MS" # A common sans-serif font
+HEADING_FONT = (APP_FONT_FAMILY, 22, "bold")
+SUBHEADING_FONT = (APP_FONT_FAMILY, 18, "bold")
+BODY_FONT = (APP_FONT_FAMILY, 14)
+BUTTON_FONT = (APP_FONT_FAMILY, 15, "bold")
 
 # Define a simple color palette (using CTk's theme system primarily, but can define for specific widgets if needed)
 # COLOR_PRIMARY = "#007ACC" # Blue
@@ -68,24 +68,24 @@ class App(ctk.CTk):
             return
 
         self.login_window = ctk.CTkToplevel(self)
-        self.login_window.title("Iniciar Sesión") # Translated
-        self.login_window.geometry("350x250")
+        self.login_window.title("¡Hola Peque!") # Translated
+        self.login_window.geometry("450x350") # Adjusted window size
         self.login_window.transient(self)
         self.login_window.grab_set()
         self.login_window.protocol("WM_DELETE_WINDOW", self.quit_application)
 
-        ctk.CTkLabel(self.login_window, text="¡Bienvenido/a! Por favor, inicia sesión", font=HEADING_FONT).pack(pady=20) # Translated
+        ctk.CTkLabel(self.login_window, text="¡Bienvenido/a a Biblio Diversión!", font=HEADING_FONT).pack(pady=20) # Translated
 
-        frame = ctk.CTkFrame(self.login_window)
-        frame.pack(pady=10, padx=20, fill="x")
+        frame = ctk.CTkFrame(self.login_window, fg_color="#E0F2F1") # Added fg_color
+        frame.pack(pady=20, padx=30, fill="x") # Adjusted padding
 
-        ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=5, pady=5, sticky="w") # Translated
-        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=200, placeholder_text="Nombre de usuario") # Translated placeholder
-        username_entry.grid(row=0, column=1, padx=5, pady=5)
+        ctk.CTkLabel(frame, text="Usuario (Nombre):", font=BODY_FONT).grid(row=0, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
+        username_entry = ctk.CTkEntry(frame, font=BODY_FONT, width=250, placeholder_text="Nombre de usuario") # Translated placeholder, adjusted width
+        username_entry.grid(row=0, column=1, padx=10, pady=10) # Adjusted padding
 
-        ctk.CTkLabel(frame, text="Contraseña:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated
-        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=200, placeholder_text="Contraseña") # Translated placeholder
-        password_entry.grid(row=1, column=1, padx=5, pady=5)
+        ctk.CTkLabel(frame, text="Contraseña:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=10, sticky="w") # Translated and adjusted padding
+        password_entry = ctk.CTkEntry(frame, font=BODY_FONT, show="*", width=250, placeholder_text="Contraseña") # Translated placeholder, adjusted width
+        password_entry.grid(row=1, column=1, padx=10, pady=10) # Adjusted padding
 
         # Give focus to username entry initially
         username_entry.focus()
@@ -93,8 +93,8 @@ class App(ctk.CTk):
         password_entry.bind("<Return>", lambda event: login_action())
 
 
-        error_label = ctk.CTkLabel(self.login_window, text="", text_color="red", font=BODY_FONT)
-        error_label.pack(pady=(0,5))
+        error_label = ctk.CTkLabel(self.login_window, text="", text_color="red", font=BODY_FONT) # Ensured BODY_FONT
+        error_label.pack(pady=(0,10)) # Adjusted padding
 
         def login_action():
             username = username_entry.get()
@@ -109,13 +109,13 @@ class App(ctk.CTk):
                 username_entry.focus()
 
         button_frame = ctk.CTkFrame(self.login_window, fg_color="transparent")
-        button_frame.pack(pady=10)
+        button_frame.pack(pady=20) # Adjusted padding
 
-        login_button = ctk.CTkButton(button_frame, text="Acceder", font=BUTTON_FONT, command=login_action) # Translated
-        login_button.pack(side="left", padx=10)
+        login_button = ctk.CTkButton(button_frame, text="Acceder", font=BUTTON_FONT, command=login_action) # Translated and ensured BUTTON_FONT
+        login_button.pack(side="left", padx=15) # Adjusted padding
 
-        quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60") # Translated
-        quit_button.pack(side="left", padx=10)
+        quit_button = ctk.CTkButton(button_frame, text="Salir", font=BUTTON_FONT, command=self.quit_application, fg_color="gray50", hover_color="gray60") # Translated and ensured BUTTON_FONT
+        quit_button.pack(side="left", padx=15) # Adjusted padding
 
         # Center the login window
         self.login_window.update_idletasks() # Update geometry
@@ -129,39 +129,44 @@ class App(ctk.CTk):
         self.tab_view = ctk.CTkTabview(self)
         self.tab_view.pack(expand=True, fill="both", padx=15, pady=15)
 
+        # Pestaña de Clasificación primero
+        self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
+        if hasattr(self, 'setup_leaderboard_tab'): # Verificar si el método existe
+            self.setup_leaderboard_tab()
+        else:
+            print("Advertencia: El método setup_leaderboard_tab no se encontró.")
+
+        # Otras pestañas después
         self.manage_books_tab = self.tab_view.add("📖 Gestionar Libros") # Translated
         self.view_books_tab = self.tab_view.add("📚 Ver Libros") # Translated
         self.manage_students_tab = self.tab_view.add("🧑‍🎓 Gestionar Alumnos") # Translated
         self.manage_loans_tab = self.tab_view.add("🔄 Gestionar Préstamos") # Translated
 
-        # Conditionally add User Management Tab
+        # Configurar las otras pestañas principales
+        if hasattr(self, 'setup_manage_books_tab'): self.setup_manage_books_tab()
+        if hasattr(self, 'setup_view_books_tab'): self.setup_view_books_tab()
+        if hasattr(self, 'setup_manage_students_tab'): self.setup_manage_students_tab()
+        if hasattr(self, 'setup_manage_loans_tab'): self.setup_manage_loans_tab()
+
+        # Pestañas condicionales de administrador
         if auth_manager.is_admin():
             self.manage_users_tab = self.tab_view.add("👤 Gestionar Usuarios") # Translated
             if hasattr(self, 'setup_manage_users_tab'):
                  self.setup_manage_users_tab()
             else:
-                print("Error: El método setup_manage_users_tab no se encontró pero se esperaba para el admin.") # Translated
-        else:
-            # Ensure self.manage_users_tab is None or handled if it might exist from a previous session/state
-            self.manage_users_tab = None
+                print("Error: El método setup_manage_users_tab no se encontró pero se esperaba para el admin.")
 
-
-        # Populate Tabs (ensure setup methods exist)
-        if hasattr(self, 'setup_manage_books_tab'): self.setup_manage_books_tab()
-        if hasattr(self, 'setup_view_books_tab'): self.setup_view_books_tab()
-        if hasattr(self, 'setup_manage_students_tab'): self.setup_manage_students_tab() # Original student management
-        if hasattr(self, 'setup_manage_loans_tab'): self.setup_manage_loans_tab()
-
-        self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
-        self.setup_leaderboard_tab() # Call the new method
-
-        if auth_manager.is_admin():
             self.manage_classrooms_tab = self.tab_view.add("🏫 Gestionar Clases") # Translated
             if hasattr(self, 'setup_manage_classrooms_tab'):
                 self.setup_manage_classrooms_tab()
             else:
                 print("Error: El método setup_manage_classrooms_tab no se encontró pero se esperaba para el admin.")
+        else:
+            self.manage_users_tab = None
+            # self.manage_classrooms_tab = None # Ensure it's None if user is not admin
 
+        # Asegurar que la pestaña de Clasificación esté activa
+        self.tab_view.set("🏆 Clasificación")
 
         # Deiconify (show) the main window now that UI is initialized
         self.deiconify()
@@ -172,7 +177,7 @@ class App(ctk.CTk):
             self.login_window.destroy()
         self.quit() # Properly exits the Tkinter mainloop
 
-    def load_icon(self, icon_name, size=(20,20)):
+    def load_icon(self, icon_name, size=(24,24)): # Default size changed to (24,24)
         if icon_name in self.icon_cache:
             return self.icon_cache[icon_name]
 
@@ -185,8 +190,9 @@ class App(ctk.CTk):
                 dev_placeholder_dir = os.path.join(os.path.abspath("."), "assets", "icons")
                 os.makedirs(dev_placeholder_dir, exist_ok=True)
                 print(f"Warning: Icon {icon_path} (from {relative_icon_path}) not found. Creating placeholder.")
-                placeholder_image = Image.new("RGBA", size, (200, 200, 200, 50))
-                img_ctk = ctk.CTkImage(light_image=placeholder_image, dark_image=placeholder_image, size=size)
+                placeholder_image = Image.new("RGBA", size, (200, 220, 200, 100)) # Pale green placeholder for light mode
+                dark_placeholder_image = Image.new("RGBA", size, (70, 90, 70, 100))   # Darker pale green for dark mode
+                img_ctk = ctk.CTkImage(light_image=placeholder_image, dark_image=dark_placeholder_image, size=size)
                 self.icon_cache[icon_name] = img_ctk # Cache placeholder
                 return img_ctk
 
@@ -198,8 +204,9 @@ class App(ctk.CTk):
             print(f"Error loading icon {relative_icon_path}: {e}")
             # Attempt to return a placeholder on any error during load
             try:
-                placeholder_image = Image.new("RGBA", size, (220, 220, 220, 70)) # Slightly different placeholder
-                img_ctk = ctk.CTkImage(light_image=placeholder_image, dark_image=placeholder_image, size=size)
+                placeholder_image = Image.new("RGBA", size, (200, 220, 200, 100)) # Pale green placeholder for light mode
+                dark_placeholder_image = Image.new("RGBA", size, (70, 90, 70, 100))   # Darker pale green for dark mode
+                img_ctk = ctk.CTkImage(light_image=placeholder_image, dark_image=dark_placeholder_image, size=size)
                 self.icon_cache[icon_name] = img_ctk # Cache placeholder
                 return img_ctk
             except Exception as pe: # Placeholder creation error
@@ -209,27 +216,27 @@ class App(ctk.CTk):
 
     def setup_manage_books_tab(self):
         tab = self.manage_books_tab
-        tab.configure(fg_color=("#F0F8FF", "#2A2D2E")) # AliceBlue for light, dark gray for dark
+        tab.configure(fg_color=("#E8F5E9", "#2C3E50"))
 
         # --- Add Book Form ---
         add_book_frame = ctk.CTkFrame(tab, corner_radius=10)
         add_book_frame.pack(pady=15, padx=15, fill="x")
 
-        ctk.CTkLabel(add_book_frame, text="✨ ¡Añade un Nuevo Libro Mágico! ✨", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15)) # Translated
+        ctk.CTkLabel(add_book_frame, text="✨ ¡Añade un Nuevo Libro Mágico! ✨", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,20)) # Increased pady
 
-        ctk.CTkLabel(add_book_frame, text="Título:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=8, sticky="w")
-        self.title_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., El Principito") # Translated
-        self.title_entry.grid(row=1, column=1, padx=10, pady=8, sticky="ew")
+        ctk.CTkLabel(add_book_frame, text="Título:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=10, sticky="w") # Increased pady
+        self.title_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., El Principito")
+        self.title_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew") # Increased pady
 
-        ctk.CTkLabel(add_book_frame, text="Autor:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=8, sticky="w")
-        self.author_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Antoine de Saint-Exupéry") # Translated
-        self.author_entry.grid(row=2, column=1, padx=10, pady=8, sticky="ew")
+        ctk.CTkLabel(add_book_frame, text="Autor:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=10, sticky="w") # Increased pady
+        self.author_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Antoine de Saint-Exupéry")
+        self.author_entry.grid(row=2, column=1, padx=10, pady=10, sticky="ew") # Increased pady
 
-        ctk.CTkLabel(add_book_frame, text="Género:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=8, sticky="w")
-        self.genero_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Fábula, Ciencia Ficción") # Translated
-        self.genero_entry.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
+        ctk.CTkLabel(add_book_frame, text="Género:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=10, sticky="w") # Increased pady
+        self.genero_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Fábula, Ciencia Ficción")
+        self.genero_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew") # Increased pady
 
-        ctk.CTkLabel(add_book_frame, text="Ubicación:", font=BODY_FONT).grid(row=4, column=0, padx=10, pady=8, sticky="w")
+        ctk.CTkLabel(add_book_frame, text="Ubicación:", font=BODY_FONT).grid(row=4, column=0, padx=10, pady=10, sticky="w") # Increased pady
 
         dynamic_classrooms = student_manager.get_distinct_classrooms()
         fixed_locations = ["Biblioteca"]
@@ -239,30 +246,30 @@ class App(ctk.CTk):
         self.ubicacion_combobox = ctk.CTkComboBox(add_book_frame,
                                                   values=display_values_setup,
                                                   width=300,
-                                                  font=BODY_FONT,
-                                                  dropdown_font=BODY_FONT)
-        self.ubicacion_combobox.grid(row=4, column=1, padx=10, pady=8, sticky="ew")
+                                                  font=BODY_FONT, # Ensured BODY_FONT
+                                                  dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.ubicacion_combobox.grid(row=4, column=1, padx=10, pady=10, sticky="ew") # Increased pady
         if all_ubicaciones:
             self.ubicacion_combobox.set(all_ubicaciones[0])
         else:
             self.ubicacion_combobox.set("N/A")
 
-        ctk.CTkLabel(add_book_frame, text="Cantidad Total:", font=BODY_FONT).grid(row=5, column=0, padx=10, pady=8, sticky="w")
-        self.cantidad_total_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., 1") # Translated
-        self.cantidad_total_entry.grid(row=5, column=1, padx=10, pady=8, sticky="ew")
+        ctk.CTkLabel(add_book_frame, text="Cantidad Total:", font=BODY_FONT).grid(row=5, column=0, padx=10, pady=10, sticky="w") # Increased pady
+        self.cantidad_total_entry = ctk.CTkEntry(add_book_frame, width=300, font=BODY_FONT, placeholder_text="Ej., 1")
+        self.cantidad_total_entry.grid(row=5, column=1, padx=10, pady=10, sticky="ew") # Increased pady
 
         add_book_icon = self.load_icon("add_book")
-        add_button = ctk.CTkButton(add_book_frame, text="Añadir Libro a la Biblioteca", image=add_book_icon, font=BUTTON_FONT, command=self.add_book_ui, corner_radius=8)
-        add_button.grid(row=6, column=0, columnspan=2, pady=15, padx=10, sticky="ew")
+        add_button = ctk.CTkButton(add_book_frame, text="Añadir Libro a la Biblioteca", image=add_book_icon, font=BUTTON_FONT, command=self.add_book_ui, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        add_button.grid(row=6, column=0, columnspan=2, pady=20, padx=10, sticky="ew") # Increased pady
         add_book_frame.columnconfigure(1, weight=1)
 
         # --- Import CSV Section ---
         import_csv_frame = ctk.CTkFrame(tab, corner_radius=10)
-        import_csv_frame.pack(pady=15, padx=15, fill="x")
-        ctk.CTkLabel(import_csv_frame, text="📤 Importar Libros desde Archivo CSV 📤", font=HEADING_FONT).pack(pady=(10,15)) # Translated
+        import_csv_frame.pack(pady=20, padx=15, fill="x") # Increased pady
+        ctk.CTkLabel(import_csv_frame, text="📤 Importar Libros desde Archivo CSV 📤", font=HEADING_FONT).pack(pady=(10,20)) # Increased pady
         import_csv_icon = self.load_icon("import_csv")
-        import_button = ctk.CTkButton(import_csv_frame, text="Seleccionar Archivo CSV", image=import_csv_icon, font=BUTTON_FONT, command=self.import_csv_ui, corner_radius=8) # Translated
-        import_button.pack(pady=10, padx=60, fill="x")
+        import_button = ctk.CTkButton(import_csv_frame, text="Seleccionar Archivo CSV", image=import_csv_icon, font=BUTTON_FONT, command=self.import_csv_ui, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        import_button.pack(pady=15, padx=60, fill="x") # Increased pady
 
 
     def add_book_ui(self):
@@ -326,15 +333,15 @@ class App(ctk.CTk):
 
     def setup_view_books_tab(self):
         tab = self.view_books_tab
-        tab.configure(fg_color=("#E6F0FA", "#2B2B2B"))
+        tab.configure(fg_color=("#E0F2F1", "#2C3E50"))
 
         controls_frame = ctk.CTkFrame(tab, corner_radius=10)
         controls_frame.pack(pady=15, padx=15, fill="x")
 
         ctk.CTkLabel(controls_frame, text="Filtrar por Ubicación:", font=BODY_FONT).grid(row=0, column=0, padx=(10,5), pady=10, sticky="w")
-        self.view_ubicacion_filter = ctk.CTkComboBox(controls_frame, values=["Todos", "Salón A", "Salón B", "Salón C", "Biblioteca"], command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150) # Translated "All"
+        self.view_ubicacion_filter = ctk.CTkComboBox(controls_frame, values=["Todos", "Biblioteca"] + student_manager.get_distinct_classrooms() , command=lambda x: self.refresh_book_list_ui(), font=BODY_FONT, dropdown_font=BODY_FONT, width=150) # Dynamic classrooms
         self.view_ubicacion_filter.grid(row=0, column=1, padx=5, pady=10)
-        self.view_ubicacion_filter.set("Todos") # Translated "All"
+        self.view_ubicacion_filter.set("Todos")
 
         # Status filter removed
         # ctk.CTkLabel(controls_frame, text="Filter by Status:", font=BODY_FONT).grid(row=0, column=2, padx=(10,5), pady=10, sticky="w")
@@ -348,19 +355,19 @@ class App(ctk.CTk):
         search_frame = ctk.CTkFrame(tab, corner_radius=10)
         search_frame.pack(pady=(0,15), padx=15, fill="x")
 
-        ctk.CTkLabel(search_frame, text="🔍 Buscar Libros:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10) # Translated
-        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Escribe para buscar por título o autor...", font=BODY_FONT, width=300) # Translated
-        self.search_entry.pack(side="left", padx=(0,10), pady=10, expand=True, fill="x")
+        ctk.CTkLabel(search_frame, text="🔍 Buscar Libros:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=15) # SUBHEADING_FONT applied, adjusted pady
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Escribe para buscar por título o autor...", font=BODY_FONT, width=300) # Ensured BODY_FONT
+        self.search_entry.pack(side="left", padx=(0,10), pady=15, expand=True, fill="x") # Adjusted pady
 
         search_icon = self.load_icon("search")
-        search_button = ctk.CTkButton(search_frame, text="Buscar", image=search_icon, font=BUTTON_FONT, command=self.search_books_ui, width=100, corner_radius=8) # Translated
-        search_button.pack(side="left", padx=(0,5), pady=10)
+        search_button = ctk.CTkButton(search_frame, text="Buscar", image=search_icon, font=BUTTON_FONT, command=self.search_books_ui, width=100, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        search_button.pack(side="left", padx=(0,5), pady=15) # Adjusted pady
 
         clear_search_icon = self.load_icon("clear_search")
-        clear_search_button = ctk.CTkButton(search_frame, text="Limpiar", image=clear_search_icon, font=BUTTON_FONT, command=self.clear_search_ui, width=80, corner_radius=8, fg_color="gray50", hover_color="gray60") # Translated
-        clear_search_button.pack(side="left", padx=(0,10), pady=10)
+        clear_search_button = ctk.CTkButton(search_frame, text="Limpiar", image=clear_search_icon, font=BUTTON_FONT, command=self.clear_search_ui, width=80, corner_radius=8, fg_color="gray50", hover_color="gray60") # Ensured BUTTON_FONT and corner_radius
+        clear_search_button.pack(side="left", padx=(0,10), pady=15) # Adjusted pady
 
-        self.book_list_frame = ctk.CTkScrollableFrame(tab, label_text="Nuestra Maravillosa Colección de Libros", label_font=HEADING_FONT, corner_radius=10) # Translated
+        self.book_list_frame = ctk.CTkScrollableFrame(tab, label_text="Nuestra Maravillosa Colección de Libros", label_font=HEADING_FONT, corner_radius=10) # Ensured HEADING_FONT
         self.book_list_frame.pack(expand=True, fill="both", padx=15, pady=(0,15))
 
         self.refresh_book_list_ui()
@@ -392,21 +399,21 @@ class App(ctk.CTk):
             total_count = book.get('cantidad_total', 0)
 
             availability_text = f"Disponible: {available_count} / {total_count}"
-            availability_color = "green" if available_count > 0 else "red"
+            availability_color = "green" if available_count > 0 else "red" # This color logic is fine
 
-            status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(APP_FONT_FAMILY, 11, "bold"), text_color=availability_color, anchor="e")
+            status_label = ctk.CTkLabel(book_item_frame, text=availability_text, font=(APP_FONT_FAMILY, 12, "bold"), text_color=availability_color, anchor="e") # Font updated
             status_label.grid(row=0, column=2, padx=(5,10), pady=(5,0), sticky="ne")
 
-            title_label = ctk.CTkLabel(book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
+            title_label = ctk.CTkLabel(book_item_frame, text=f"{book.get('titulo', 'N/A')}", font=(APP_FONT_FAMILY, 16, "bold"), anchor="w") # Font updated
             title_label.grid(row=0, column=0, columnspan=2, padx=10, pady=(5,2), sticky="w")
 
-            author_label = ctk.CTkLabel(book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 11, "italic"), anchor="w")
+            author_label = ctk.CTkLabel(book_item_frame, text=f"por {book.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 13, "italic"), anchor="w") # Font updated
             author_label.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky="w")
 
             info_text = f"Ubicación: {book.get('ubicacion', 'N/A')}"
             if book.get('genero'):
                 info_text += f"  |  Género: {book.get('genero')}"
-            info_label = ctk.CTkLabel(book_item_frame, text=info_text, font=(APP_FONT_FAMILY, 10), anchor="w")
+            info_label = ctk.CTkLabel(book_item_frame, text=info_text, font=(APP_FONT_FAMILY, 12), anchor="w")# Font updated
             info_label.grid(row=2, column=0, columnspan=3, padx=10, pady=(0,8), sticky="w")
 
             # Removed image_path display for now as it's not in the new schema
@@ -456,50 +463,50 @@ class App(ctk.CTk):
 
     def setup_manage_students_tab(self):
         tab = self.manage_students_tab
-        tab.configure(fg_color=("#FAF0E6", "#2E2B28"))
+        tab.configure(fg_color=("#F1F8E9", "#2C3E50"))
 
         add_student_frame = ctk.CTkFrame(tab, corner_radius=10)
         add_student_frame.pack(pady=15, padx=15, fill="x")
 
-        ctk.CTkLabel(add_student_frame, text="🌟 ¡Añade un Nuevo Alumno Estrella! 🌟", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15)) # Translated
+        ctk.CTkLabel(add_student_frame, text="🌟 ¡Añade un Nuevo Alumno Estrella! 🌟", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,20)) # HEADING_FONT, Increased pady
 
-        ctk.CTkLabel(add_student_frame, text="Nombre del Alumno:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=8, sticky="w") # Translated
-        self.student_name_entry = ctk.CTkEntry(add_student_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Luna Lovegood") # Translated
-        self.student_name_entry.grid(row=1, column=1, padx=10, pady=8, sticky="ew")
+        ctk.CTkLabel(add_student_frame, text="Nombre del Alumno:", font=BODY_FONT).grid(row=1, column=0, padx=10, pady=10, sticky="w") # BODY_FONT, Increased pady
+        self.student_name_entry = ctk.CTkEntry(add_student_frame, width=300, font=BODY_FONT, placeholder_text="Ej., Luna Lovegood") # Ensured BODY_FONT
+        self.student_name_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew") # Increased pady
 
-        ctk.CTkLabel(add_student_frame, text="Clase:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=8, sticky="w") # Translated "Classroom" to "Clase"
+        ctk.CTkLabel(add_student_frame, text="Clase:", font=BODY_FONT).grid(row=2, column=0, padx=10, pady=10, sticky="w") # BODY_FONT, Increased pady
 
         current_classrooms_stud = student_manager.get_distinct_classrooms()
-        stud_combo_values = current_classrooms_stud if current_classrooms_stud else ["N/A"] # Use "N/A" or similar if empty
-        self.student_classroom_combo = ctk.CTkComboBox(add_student_frame, values=stud_combo_values, width=300, font=BODY_FONT, dropdown_font=BODY_FONT)
-        self.student_classroom_combo.grid(row=2, column=1, padx=10, pady=8, sticky="ew")
+        stud_combo_values = current_classrooms_stud if current_classrooms_stud else ["N/A"]
+        self.student_classroom_combo = ctk.CTkComboBox(add_student_frame, values=stud_combo_values, width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.student_classroom_combo.grid(row=2, column=1, padx=10, pady=10, sticky="ew") # Increased pady
         if current_classrooms_stud:
             self.student_classroom_combo.set(current_classrooms_stud[0])
         else:
-            self.student_classroom_combo.set("N/A") # Set placeholder if no classes
+            self.student_classroom_combo.set("N/A")
 
-        ctk.CTkLabel(add_student_frame, text="Rol:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=8, sticky="w") # Translated
-        self.student_role_combo = ctk.CTkComboBox(add_student_frame, values=["alumno", "líder", "admin"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Translated values
-        self.student_role_combo.grid(row=3, column=1, padx=10, pady=8, sticky="ew")
-        self.student_role_combo.set("alumno") # Translated
+        ctk.CTkLabel(add_student_frame, text="Rol:", font=BODY_FONT).grid(row=3, column=0, padx=10, pady=10, sticky="w") # BODY_FONT, Increased pady
+        self.student_role_combo = ctk.CTkComboBox(add_student_frame, values=["alumno", "líder", "admin"], width=300, font=BODY_FONT, dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.student_role_combo.grid(row=3, column=1, padx=10, pady=10, sticky="ew") # Increased pady
+        self.student_role_combo.set("alumno")
         add_student_frame.columnconfigure(1, weight=1)
 
         add_student_icon = self.load_icon("students")
-        add_student_button = ctk.CTkButton(add_student_frame, text="Añadir Alumno", image=add_student_icon, font=BUTTON_FONT, command=self.add_student_ui, corner_radius=8) # Translated
-        add_student_button.grid(row=4, column=0, columnspan=2, pady=15, padx=10, sticky="ew")
+        add_student_button = ctk.CTkButton(add_student_frame, text="Añadir Alumno", image=add_student_icon, font=BUTTON_FONT, command=self.add_student_ui, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        add_student_button.grid(row=4, column=0, columnspan=2, pady=20, padx=10, sticky="ew") # Increased pady
 
         students_list_frame_container = ctk.CTkFrame(tab, corner_radius=10)
         students_list_frame_container.pack(pady=(0,15), padx=15, expand=True, fill="both")
 
         list_header_frame = ctk.CTkFrame(students_list_frame_container, fg_color="transparent")
-        list_header_frame.pack(fill="x", pady=(5,0))
-        ctk.CTkLabel(list_header_frame, text="🎓 Nuestros Increíbles Alumnos 🎓", font=HEADING_FONT).pack(side="left", padx=10, pady=5) # Translated
+        list_header_frame.pack(fill="x", pady=(10,5)) # Adjusted pady
+        ctk.CTkLabel(list_header_frame, text="🎓 Nuestros Increíbles Alumnos 🎓", font=HEADING_FONT).pack(side="left", padx=10, pady=10) # HEADING_FONT, Adjusted pady
         refresh_students_icon = self.load_icon("refresh")
-        refresh_students_button = ctk.CTkButton(list_header_frame, text="Actualizar", image=refresh_students_icon, font=BUTTON_FONT, command=self.refresh_student_list_ui, width=100, corner_radius=8) # Translated
-        refresh_students_button.pack(side="right", padx=10, pady=5)
+        refresh_students_button = ctk.CTkButton(list_header_frame, text="Actualizar", image=refresh_students_icon, font=BUTTON_FONT, command=self.refresh_student_list_ui, width=120, corner_radius=8) # Ensured BUTTON_FONT, Adjusted width and corner_radius
+        refresh_students_button.pack(side="right", padx=10, pady=10) # Adjusted pady
 
-        self.students_list_frame = ctk.CTkScrollableFrame(students_list_frame_container, label_text="")
-        self.students_list_frame.pack(expand=True, fill="both", padx=10, pady=10)
+        self.students_list_frame = ctk.CTkScrollableFrame(students_list_frame_container, label_text="") # Label text removed as title is above
+        self.students_list_frame.pack(expand=True, fill="both", padx=10, pady=(5,10)) # Adjusted pady
 
         self.refresh_student_list_ui()
 
@@ -553,20 +560,20 @@ class App(ctk.CTk):
         students = student_manager.get_students_db()
 
         if not students:
-            no_students_label = ctk.CTkLabel(self.students_list_frame, text="No se encontraron alumnos.", font=ctk.CTkFont(size=14)) # Translated
-            no_students_label.pack(pady=20)
+            no_students_label = ctk.CTkLabel(self.students_list_frame, text="No se encontraron alumnos.", font=BODY_FONT) # BODY_FONT
+            no_students_label.pack(pady=20, padx=10) # Adjusted padding
             return
 
         for i, student in enumerate(students):
-            student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15"))
-            student_item_frame.pack(fill="x", pady=(2,0), padx=5)
-            details = f"Nombre: {student['name']} ({student['role']}) - Puntos: {student.get('points', 0)}\nClase: {student['classroom']} | ID: {student['id']}" # Translated & Points Added
-            label = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w")
-            label.pack(pady=5, padx=10, fill="x", expand=True)
+            student_item_frame = ctk.CTkFrame(self.students_list_frame, fg_color=("gray85", "gray17") if i%2 == 0 else ("gray80", "gray15")) # Alternating colors are fine
+            student_item_frame.pack(fill="x", pady=4, padx=5) # Adjusted pady
+            details = f"Nombre: {student['name']} ({student['role']}) - Puntos: {student.get('points', 0)}\nClase: {student['classroom']} | ID: {student['id']}"
+            label = ctk.CTkLabel(student_item_frame, text=details, justify="left", anchor="w", font=BODY_FONT) # BODY_FONT
+            label.pack(pady=8, padx=10, fill="x", expand=True) # Adjusted pady
 
     def setup_manage_loans_tab(self):
         tab = self.manage_loans_tab
-        tab.configure(fg_color=("#E0FFFF", "#2C3E50")) # LightCyan for light, dark slate blue for dark
+        tab.configure(fg_color=("#E0F7FA", "#2C3E50"))  # This was already updated
 
         # Dictionaries to map display names to IDs
         self.leader_student_map = {}
@@ -577,8 +584,8 @@ class App(ctk.CTk):
         # --- Student Leader Selection ---
         leader_selection_frame = ctk.CTkFrame(tab, corner_radius=10)
         leader_selection_frame.pack(pady=15, padx=15, fill="x")
-        ctk.CTkLabel(leader_selection_frame, text="👑 Seleccionar Líder Estudiantil Actuante:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10) # Translated
-        self.leader_selector_combo = ctk.CTkComboBox(leader_selection_frame, width=300, font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_leader_selected)
+        ctk.CTkLabel(leader_selection_frame, text="👑 Seleccionar Líder Estudiantil Actuante:", font=SUBHEADING_FONT).pack(side="left", padx=(10,10), pady=10) # SUBHEADING_FONT
+        self.leader_selector_combo = ctk.CTkComboBox(leader_selection_frame, width=300, font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_leader_selected) # Ensured BODY_FONT
         self.leader_selector_combo.pack(side="left", padx=(0,10), pady=10, expand=True)
 
         # --- Main content frame for loans (will split into left and right) ---
@@ -591,15 +598,15 @@ class App(ctk.CTk):
         # --- Lend Book Section ---
         lend_frame = ctk.CTkFrame(left_frame, corner_radius=8)
         lend_frame.pack(pady=(0,10), padx=10, fill="x")
-        ctk.CTkLabel(lend_frame, text="➡️ Prestar un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # Translated
+        ctk.CTkLabel(lend_frame, text="➡️ Prestar un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # HEADING_FONT
 
-        ctk.CTkLabel(lend_frame, text="Libro:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated
-        self.lend_book_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
-        self.lend_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
+        ctk.CTkLabel(lend_frame, text="Libro:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.lend_book_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.lend_book_combo.grid(row=1, column=1, padx=5, pady=10, sticky="ew") # pady adjusted
 
-        ctk.CTkLabel(lend_frame, text="Prestatario:", font=BODY_FONT).grid(row=2, column=0, padx=5, pady=8, sticky="w") # Translated "Borrower"
-        self.borrower_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT)
-        self.borrower_combo.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
+        ctk.CTkLabel(lend_frame, text="Prestatario:", font=BODY_FONT).grid(row=2, column=0, padx=5, pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.borrower_combo = ctk.CTkComboBox(lend_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.borrower_combo.grid(row=2, column=1, padx=5, pady=10, sticky="ew") # pady adjusted
 
         # ctk.CTkLabel(lend_frame, text="Fecha de Devolución:", font=BODY_FONT).grid(row=3, column=0, padx=5, pady=8, sticky="w") # Translated "Due Date"
         # self.due_date_entry = ctk.CTkEntry(lend_frame, placeholder_text=(datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d'), width=280, font=BODY_FONT)
@@ -608,30 +615,30 @@ class App(ctk.CTk):
 
         lend_icon = self.load_icon("book_alt")
         # Storing the button in an instance variable self.lend_book_button
-        self.lend_book_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Translated
-        self.lend_book_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Adjusted row from 4 to 3
+        self.lend_book_button = ctk.CTkButton(lend_frame, text="Prestar Libro", image=lend_icon, font=BUTTON_FONT, command=self.lend_book_ui, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        self.lend_book_button.grid(row=3, column=0, columnspan=2, pady=20, sticky="ew") # Increased pady
 
         # --- Return Book Section ---
         return_frame = ctk.CTkFrame(left_frame, corner_radius=8)
         return_frame.pack(pady=10, padx=10, fill="x")
-        ctk.CTkLabel(return_frame, text="⬅️ Devolver un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # Translated
+        ctk.CTkLabel(return_frame, text="⬅️ Devolver un Libro", font=HEADING_FONT).grid(row=0, column=0, columnspan=2, pady=(10,15), sticky="w") # HEADING_FONT
 
-        ctk.CTkLabel(return_frame, text="Libro Prestado:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=8, sticky="w") # Translated "Book:" to "Libro Prestado:" for clarity
-        self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_return_book_selection_change)
-        self.return_book_combo.grid(row=1, column=1, padx=5, pady=8, sticky="ew")
+        ctk.CTkLabel(return_frame, text="Libro Prestado:", font=BODY_FONT).grid(row=1, column=0, padx=5, pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.return_book_combo = ctk.CTkComboBox(return_frame, width=280, state="disabled", font=BODY_FONT, dropdown_font=BODY_FONT, command=self.on_return_book_selection_change) # Ensured BODY_FONT
+        self.return_book_combo.grid(row=1, column=1, padx=5, pady=10, sticky="ew") # pady adjusted
         return_frame.columnconfigure(1, weight=1)
 
-        self.worksheet_submitted_checkbox = ctk.CTkCheckBox(return_frame, text="Hoja de trabajo entregada", font=BODY_FONT)
+        self.worksheet_submitted_checkbox = ctk.CTkCheckBox(return_frame, text="Hoja de trabajo entregada", font=BODY_FONT) # Ensured BODY_FONT
         self.worksheet_submitted_checkbox.configure(state="disabled")
-        self.worksheet_submitted_checkbox.grid(row=2, column=0, columnspan=2, padx=5, pady=(5,5), sticky="w")
+        self.worksheet_submitted_checkbox.grid(row=2, column=0, columnspan=2, padx=5, pady=10, sticky="w") # pady adjusted
 
         return_icon = self.load_icon("home")
-        return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Translated
-        return_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew") # Shifted to row 3
+        return_button = ctk.CTkButton(return_frame, text="Devolver Libro", image=return_icon, font=BUTTON_FONT, command=self.return_book_ui, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        return_button.grid(row=3, column=0, columnspan=2, pady=15, sticky="ew")
 
         extend_loan_icon = self.load_icon("refresh")
-        self.extend_loan_button = ctk.CTkButton(return_frame, text="Extender Préstamo", image=extend_loan_icon, font=BUTTON_FONT, state="disabled", corner_radius=8, command=self.extend_loan_ui)
-        self.extend_loan_button.grid(row=4, column=0, columnspan=2, pady=(5,15), sticky="ew") # Shifted to row 4
+        self.extend_loan_button = ctk.CTkButton(return_frame, text="Extender Préstamo", image=extend_loan_icon, font=BUTTON_FONT, state="disabled", corner_radius=8, command=self.extend_loan_ui) # Ensured BUTTON_FONT and corner_radius
+        self.extend_loan_button.grid(row=4, column=0, columnspan=2, pady=(5,15), sticky="ew")
 
         right_frame = ctk.CTkFrame(main_loan_content_frame, fg_color="transparent")
         right_frame.pack(side="left", expand=True, fill="both", padx=(10,0), pady=0)
@@ -645,14 +652,14 @@ class App(ctk.CTk):
         reminders_tab.configure(fg_color=("#FFF0F5", "#383436"))
 
 
-        self.current_loans_label = ctk.CTkLabel(current_loans_tab, text="Préstamos Actuales en [Clase del Líder]", font=SUBHEADING_FONT) # Translated
+        self.current_loans_label = ctk.CTkLabel(current_loans_tab, text="Préstamos Actuales en [Clase del Líder]", font=SUBHEADING_FONT) # Ensured SUBHEADING_FONT
         self.current_loans_label.pack(pady=10, padx=10)
-        self.current_loans_frame = ctk.CTkScrollableFrame(current_loans_tab, label_text="", corner_radius=6)
+        self.current_loans_frame = ctk.CTkScrollableFrame(current_loans_tab, label_text="", corner_radius=6) # Label text removed
         self.current_loans_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
 
-        self.reminders_label = ctk.CTkLabel(reminders_tab, text="Libros Próximos a Vencer/Vencidos en [Clase del Líder]", font=SUBHEADING_FONT) # Translated
+        self.reminders_label = ctk.CTkLabel(reminders_tab, text="Libros Próximos a Vencer/Vencidos en [Clase del Líder]", font=SUBHEADING_FONT) # Ensured SUBHEADING_FONT
         self.reminders_label.pack(pady=10, padx=10)
-        self.reminders_frame = ctk.CTkScrollableFrame(reminders_tab, label_text="", corner_radius=6)
+        self.reminders_frame = ctk.CTkScrollableFrame(reminders_tab, label_text="", corner_radius=6) # Label text removed
         self.reminders_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
 
         self.refresh_leader_selector_combo() # Populate initially, which then calls on_leader_selected
@@ -939,8 +946,8 @@ class App(ctk.CTk):
             details = f"Libro: {loan.get('titulo', 'N/A')} (Autor: {loan.get('autor', 'N/A')})\n" \
                       f"Prestatario: {borrower_name}\n" \
                       f"Prestado: {loan_date_display} | Vence: {due_date_display} (ID: {loan.get('loan_id', '')[:8]}...)"
-            label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w")
-            label.pack(pady=5, padx=10, fill="x", expand=True)
+            label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", font=BODY_FONT) # BODY_FONT
+            label.pack(pady=8, padx=10, fill="x", expand=True) # Adjusted pady
 
     def refresh_reminders_list(self):
         for widget in self.reminders_frame.winfo_children(): widget.destroy()
@@ -982,13 +989,13 @@ class App(ctk.CTk):
 
             if is_overdue: details += " (VENCIDO)"
 
-            label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", text_color=text_color[0] if ctk.get_appearance_mode().lower() == "light" else text_color[1], font=ctk.CTkFont(weight=font_weight))
-            label.pack(pady=5, padx=10, fill="x", expand=True)
+            label = ctk.CTkLabel(item_frame, text=details, justify="left", anchor="w", text_color=text_color[0] if ctk.get_appearance_mode().lower() == "light" else text_color[1], font=ctk.CTkFont(family=APP_FONT_FAMILY, size=BODY_FONT[1], weight=font_weight)) # BODY_FONT size, custom weight
+            label.pack(pady=8, padx=10, fill="x", expand=True) # Adjusted pady
 
     # --- USER MANAGEMENT TAB ---
     def setup_manage_users_tab(self):
         tab = self.manage_users_tab
-        tab.configure(fg_color=("#E9E9E9", "#3B3B3B"))
+        tab.configure(fg_color=("#F5F5F5", "#333333"))
 
         # Main frame for the tab
         main_frame = ctk.CTkFrame(tab, fg_color="transparent")
@@ -998,74 +1005,73 @@ class App(ctk.CTk):
         add_user_outer_frame = ctk.CTkFrame(main_frame, corner_radius=10)
         add_user_outer_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(add_user_outer_frame, text="➕ Añadir Nuevo Usuario / Editar Usuario", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,15), padx=10) # Translated
+        ctk.CTkLabel(add_user_outer_frame, text="➕ Añadir Nuevo Usuario / Editar Usuario", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,20), padx=10) # HEADING_FONT, pady adjusted
 
-        ctk.CTkLabel(add_user_outer_frame, text="Nombre:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=8, sticky="w") # Translated
-        self.um_name_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, placeholder_text="Nombre Completo") # Translated
-        self.um_name_entry.grid(row=1, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
+        ctk.CTkLabel(add_user_outer_frame, text="Nombre:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.um_name_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, placeholder_text="Nombre Completo") # Ensured BODY_FONT
+        self.um_name_entry.grid(row=1, column=1, columnspan=2, padx=(0,10), pady=10, sticky="ew") # pady adjusted
 
-        ctk.CTkLabel(add_user_outer_frame, text="Contraseña:", font=BODY_FONT).grid(row=2, column=0, padx=(10,5), pady=8, sticky="w") # Translated
-        self.um_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Introducir contraseña") # Translated
-        self.um_password_entry.grid(row=2, column=1, padx=(0,5), pady=8, sticky="ew")
+        ctk.CTkLabel(add_user_outer_frame, text="Contraseña:", font=BODY_FONT).grid(row=2, column=0, padx=(10,5), pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.um_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Introducir contraseña") # Ensured BODY_FONT
+        self.um_password_entry.grid(row=2, column=1, padx=(0,5), pady=10, sticky="ew") # pady adjusted
 
-        ctk.CTkLabel(add_user_outer_frame, text="Confirmar:", font=BODY_FONT).grid(row=3, column=0, padx=(10,5), pady=8, sticky="w") # Translated
-        self.um_confirm_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Confirmar contraseña") # Translated
-        self.um_confirm_password_entry.grid(row=3, column=1, padx=(0,5), pady=8, sticky="ew")
+        ctk.CTkLabel(add_user_outer_frame, text="Confirmar:", font=BODY_FONT).grid(row=3, column=0, padx=(10,5), pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.um_confirm_password_entry = ctk.CTkEntry(add_user_outer_frame, font=BODY_FONT, show="*", placeholder_text="Confirmar contraseña") # Ensured BODY_FONT
+        self.um_confirm_password_entry.grid(row=3, column=1, padx=(0,5), pady=10, sticky="ew") # pady adjusted
 
         # self.um_show_password_var = ctk.StringVar(value="off")
         # show_password_check = ctk.CTkCheckBox(add_user_outer_frame, text="Mostrar", variable=self.um_show_password_var, onvalue="on", offvalue="off", command=self.um_toggle_password_visibility, font=BODY_FONT) # Translated "Show"
-        # show_password_check.grid(row=2, column=2, rowspan=2, padx=(0,10), pady=8, sticky="w")
+        # show_password_check.grid(row=2, column=2, rowspan=2, padx=(0,10), pady=10, sticky="w") # pady adjusted
 
-        ctk.CTkLabel(add_user_outer_frame, text="Clase/Oficina:", font=BODY_FONT).grid(row=4, column=0, padx=(10,5), pady=8, sticky="w") # Translated "Classroom"
+        ctk.CTkLabel(add_user_outer_frame, text="Clase/Oficina:", font=BODY_FONT).grid(row=4, column=0, padx=(10,5), pady=10, sticky="w") # BODY_FONT, pady adjusted
 
         current_classrooms_um = student_manager.get_distinct_classrooms()
         # Ensure "OficinaAdmin" is always an option, and handle if no other classrooms exist
         um_initial_values = sorted(list(set(current_classrooms_um + ["OficinaAdmin"])))
-        if not um_initial_values: # Should not happen if OficinaAdmin is always added
+        if not um_initial_values:
             um_initial_values = ["OficinaAdmin"]
 
-        self.um_classroom_combo = ctk.CTkComboBox(add_user_outer_frame, values=um_initial_values, font=BODY_FONT, dropdown_font=BODY_FONT)
-        self.um_classroom_combo.grid(row=4, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
-        if "Clase A" in um_initial_values: # Try to set a common default
+        self.um_classroom_combo = ctk.CTkComboBox(add_user_outer_frame, values=um_initial_values, font=BODY_FONT, dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.um_classroom_combo.grid(row=4, column=1, columnspan=2, padx=(0,10), pady=10, sticky="ew") # pady adjusted
+        if "Clase A" in um_initial_values:
              self.um_classroom_combo.set("Clase A")
-        elif um_initial_values: # Set to first available if "Clase A" is not there
+        elif um_initial_values:
             self.um_classroom_combo.set(um_initial_values[0])
-        # If um_initial_values is empty (e.g. only OficinaAdmin and it's not set as default) it will be blank, which is acceptable.
 
-        ctk.CTkLabel(add_user_outer_frame, text="Rol:", font=BODY_FONT).grid(row=5, column=0, padx=(10,5), pady=8, sticky="w") # Translated
-        self.um_role_combo = ctk.CTkComboBox(add_user_outer_frame, values=["alumno", "líder", "admin"], font=BODY_FONT, dropdown_font=BODY_FONT) # Translated
-        self.um_role_combo.grid(row=5, column=1, columnspan=2, padx=(0,10), pady=8, sticky="ew")
-        self.um_role_combo.set("alumno") # Translated
+
+        ctk.CTkLabel(add_user_outer_frame, text="Rol:", font=BODY_FONT).grid(row=5, column=0, padx=(10,5), pady=10, sticky="w") # BODY_FONT, pady adjusted
+        self.um_role_combo = ctk.CTkComboBox(add_user_outer_frame, values=["alumno", "líder", "admin"], font=BODY_FONT, dropdown_font=BODY_FONT) # Ensured BODY_FONT
+        self.um_role_combo.grid(row=5, column=1, columnspan=2, padx=(0,10), pady=10, sticky="ew") # pady adjusted
+        self.um_role_combo.set("alumno")
 
         add_user_outer_frame.columnconfigure(1, weight=1)
 
-        self.um_add_user_button = ctk.CTkButton(add_user_outer_frame, text="Añadir Usuario", font=BUTTON_FONT, command=self.add_user_ui, corner_radius=8) # Translated
-        self.um_add_user_button.grid(row=6, column=0, padx=(10,5), pady=15, sticky="ew")
+        self.um_add_user_button = ctk.CTkButton(add_user_outer_frame, text="Añadir Usuario", font=BUTTON_FONT, command=self.add_user_ui, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        self.um_add_user_button.grid(row=6, column=0, padx=(10,5), pady=20, sticky="ew") # pady adjusted
 
-        self.um_update_user_button = ctk.CTkButton(add_user_outer_frame, text="Actualizar Usuario Seleccionado", font=BUTTON_FONT, command=self.edit_user_ui, corner_radius=8, state="disabled") # Translated
-        self.um_update_user_button.grid(row=6, column=1, padx=(5,5), pady=15, sticky="ew")
+        self.um_update_user_button = ctk.CTkButton(add_user_outer_frame, text="Actualizar Usuario Seleccionado", font=BUTTON_FONT, command=self.edit_user_ui, corner_radius=8, state="disabled") # Ensured BUTTON_FONT and corner_radius
+        self.um_update_user_button.grid(row=6, column=1, padx=(5,5), pady=20, sticky="ew") # pady adjusted
 
-        self.um_clear_form_button = ctk.CTkButton(add_user_outer_frame, text="Limpiar Formulario", font=BUTTON_FONT, command=self.clear_user_form_ui, corner_radius=8, fg_color="gray50", hover_color="gray60") # Translated
-        self.um_clear_form_button.grid(row=6, column=2, padx=(5,10), pady=15, sticky="ew")
+        self.um_clear_form_button = ctk.CTkButton(add_user_outer_frame, text="Limpiar Formulario", font=BUTTON_FONT, command=self.clear_user_form_ui, corner_radius=8, fg_color="gray50", hover_color="gray60") # Ensured BUTTON_FONT and corner_radius
+        self.um_clear_form_button.grid(row=6, column=2, padx=(5,10), pady=20, sticky="ew") # pady adjusted
 
         # --- Import Students CSV Section ---
         import_students_csv_frame = ctk.CTkFrame(main_frame, corner_radius=10)
-        import_students_csv_frame.pack(pady=(10,5), padx=10, fill="x")
+        import_students_csv_frame.pack(pady=(15,10), padx=10, fill="x") # Adjusted pady
 
-        ctk.CTkLabel(import_students_csv_frame, text="📤 Importar Alumnos desde CSV", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,10), padx=10, sticky="w")
+        ctk.CTkLabel(import_students_csv_frame, text="📤 Importar Alumnos desde CSV", font=HEADING_FONT).grid(row=0, column=0, columnspan=3, pady=(10,15), padx=10, sticky="w") # HEADING_FONT, pady adjusted
 
-        ctk.CTkLabel(import_students_csv_frame, text="Seleccionar Clase:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=8, sticky="w") # Translated
+        ctk.CTkLabel(import_students_csv_frame, text="Seleccionar Clase:", font=BODY_FONT).grid(row=1, column=0, padx=(10,5), pady=10, sticky="w") # BODY_FONT, pady adjusted
 
         # Populate classroom combo for CSV import
         # Note: get_distinct_classrooms() is already defined in student_manager
         available_classrooms_for_csv = student_manager.get_distinct_classrooms()
         if not available_classrooms_for_csv: # If no classrooms exist yet, provide a default or guidance
-            available_classrooms_for_csv = ["Primero cree una clase"] # Translated
-            # Consider disabling the import button or combo if no classrooms.
-            # For now, it will show this message. User can type a new class name too.
+            available_classrooms_for_csv = ["Primero cree una clase"]
 
-        self.import_csv_classroom_combo = ctk.CTkComboBox(import_students_csv_frame, values=available_classrooms_for_csv, font=BODY_FONT, dropdown_font=BODY_FONT, width=250)
-        self.import_csv_classroom_combo.grid(row=1, column=1, padx=(0,10), pady=8, sticky="ew")
+
+        self.import_csv_classroom_combo = ctk.CTkComboBox(import_students_csv_frame, values=available_classrooms_for_csv, font=BODY_FONT, dropdown_font=BODY_FONT, width=250) # Ensured BODY_FONT
+        self.import_csv_classroom_combo.grid(row=1, column=1, padx=(0,10), pady=10, sticky="ew") # pady adjusted
         if available_classrooms_for_csv and available_classrooms_for_csv[0] != "Primero cree una clase":
             self.import_csv_classroom_combo.set(available_classrooms_for_csv[0])
         else:
@@ -1077,14 +1083,14 @@ class App(ctk.CTk):
             import_students_csv_frame,
             text="Seleccionar Archivo CSV e Importar Alumnos",
             image=import_csv_icon,
-            font=BUTTON_FONT,
+            font=BUTTON_FONT, # Ensured BUTTON_FONT
             command=self.import_students_csv_ui,
-            corner_radius=8
+            corner_radius=8 # Ensured corner_radius
         )
-        self.import_students_csv_button.grid(row=1, column=2, padx=(5,10), pady=8, sticky="ew")
+        self.import_students_csv_button.grid(row=1, column=2, padx=(5,10), pady=10, sticky="ew") # pady adjusted
 
-        import_students_csv_frame.columnconfigure(1, weight=1) # Allow combobox to expand a bit
-        import_students_csv_frame.columnconfigure(2, weight=1) # Allow button to expand a bit
+        import_students_csv_frame.columnconfigure(1, weight=1)
+        import_students_csv_frame.columnconfigure(2, weight=1)
 
 
         # --- User List Section ---
@@ -1092,26 +1098,26 @@ class App(ctk.CTk):
         user_list_container.pack(pady=10, padx=10, expand=True, fill="both")
 
         list_header = ctk.CTkFrame(user_list_container, fg_color="transparent")
-        list_header.pack(fill="x", pady=(5,0))
-        ctk.CTkLabel(list_header, text="👥 Usuarios Registrados", font=HEADING_FONT).pack(side="left", padx=10, pady=5) # Translated
+        list_header.pack(fill="x", pady=(10,5)) # Adjusted pady
+        ctk.CTkLabel(list_header, text="👥 Usuarios Registrados", font=HEADING_FONT).pack(side="left", padx=10, pady=10) # HEADING_FONT, pady adjusted
         refresh_icon = self.load_icon("refresh")
-        refresh_button = ctk.CTkButton(list_header, text="Actualizar Lista", image=refresh_icon, font=BUTTON_FONT, command=self.refresh_user_list_ui, width=120, corner_radius=8) # Translated
-        refresh_button.pack(side="right", padx=10, pady=5)
+        refresh_button = ctk.CTkButton(list_header, text="Actualizar Lista", image=refresh_icon, font=BUTTON_FONT, command=self.refresh_user_list_ui, width=120, corner_radius=8) # Ensured BUTTON_FONT and corner_radius
+        refresh_button.pack(side="right", padx=10, pady=10) # pady adjusted
 
-        self.user_list_scroll_frame = ctk.CTkScrollableFrame(user_list_container, label_text="")
-        self.user_list_scroll_frame.pack(expand=True, fill="both", padx=10, pady=10)
+        self.user_list_scroll_frame = ctk.CTkScrollableFrame(user_list_container, label_text="") # Label text removed
+        self.user_list_scroll_frame.pack(expand=True, fill="both", padx=10, pady=(5,10)) # Adjusted pady
 
         # --- User Actions Section (for selected user) ---
         actions_frame = ctk.CTkFrame(main_frame, corner_radius=10)
         actions_frame.pack(pady=10, padx=10, fill="x")
-        ctk.CTkLabel(actions_frame, text="Acciones para Usuario Seleccionado:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10) # Translated
+        ctk.CTkLabel(actions_frame, text="Acciones para Usuario Seleccionado:", font=SUBHEADING_FONT).pack(side="left", padx=(10,15), pady=10) # SUBHEADING_FONT
 
         delete_icon = self.load_icon("close")
-        self.um_delete_button = ctk.CTkButton(actions_frame, text="Eliminar", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8) # Translated
+        self.um_delete_button = ctk.CTkButton(actions_frame, text="Eliminar", image=delete_icon, font=BUTTON_FONT, command=self.delete_user_ui, state="disabled", fg_color="#D32F2F", hover_color="#B71C1C", corner_radius=8) # Ensured BUTTON_FONT and corner_radius
         self.um_delete_button.pack(side="left", padx=5, pady=10)
 
         reset_pass_icon = self.load_icon("refresh")
-        self.um_reset_password_button = ctk.CTkButton(actions_frame, text="Restablecer Contraseña", image=reset_pass_icon, font=BUTTON_FONT, command=self.reset_user_password_ui, state="disabled", corner_radius=8) # Translated
+        self.um_reset_password_button = ctk.CTkButton(actions_frame, text="Restablecer Contraseña", image=reset_pass_icon, font=BUTTON_FONT, command=self.reset_user_password_ui, state="disabled", corner_radius=8) # Ensured BUTTON_FONT and corner_radius
         self.um_reset_password_button.pack(side="left", padx=5, pady=10)
 
         self.refresh_user_list_ui()
@@ -1183,13 +1189,13 @@ class App(ctk.CTk):
                 "admin": "admin"
             }
             display_role = role_display_map.get(user['role'], user['role']) # Fallback to original if no map found
-            details_text = f"👤 {user['name']} ({display_role}) - Puntos: {user.get('points', 0)} - 🏫 {user['classroom']}" # Points Added
-            # Small ID display: f"ID: {user_id[:8]}..."
-            id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 9, "italic"), text_color="gray") # "ID" is common
+            details_text = f"👤 {user['name']} ({display_role}) - Puntos: {user.get('points', 0)} - 🏫 {user['classroom']}"
+
+            id_label = ctk.CTkLabel(item_frame, text=f"ID: {user_id[:8]}...", font=(APP_FONT_FAMILY, 11, "italic"), text_color="gray") # Adjusted font size slightly
             id_label.pack(side="right", padx=(0,10), pady=2)
 
-            label = ctk.CTkLabel(item_frame, text=details_text, font=BODY_FONT, anchor="w")
-            label.pack(side="left", padx=10, pady=8, fill="x", expand=True)
+            label = ctk.CTkLabel(item_frame, text=details_text, font=BODY_FONT, anchor="w") # Ensured BODY_FONT
+            label.pack(side="left", padx=10, pady=10, fill="x", expand=True) # Adjusted pady
 
             # Make the frame clickable
             # Using lambda with default argument to capture current user_id and user data for the callback
@@ -1397,20 +1403,20 @@ class App(ctk.CTk):
     def setup_manage_classrooms_tab(self):
         self.selected_classroom_for_rename = None # Initialize instance variable
         tab = self.manage_classrooms_tab
-        tab.configure(fg_color=("#F0F0F0", "#333333")) # Neutral colors
+        tab.configure(fg_color=("#F5F5F5", "#333333")) # Neutral gray for admin tab
 
         # Main content frame, splitting into two columns
         main_content_frame = ctk.CTkFrame(tab, fg_color="transparent")
         main_content_frame.pack(expand=True, fill="both", padx=15, pady=15)
-        main_content_frame.grid_columnconfigure(0, weight=1) # List column
-        main_content_frame.grid_columnconfigure(1, weight=1) # Actions column
+        main_content_frame.grid_columnconfigure(0, weight=1)
+        main_content_frame.grid_columnconfigure(1, weight=1)
         main_content_frame.grid_rowconfigure(0, weight=1)
 
         # --- Left Column: List and Select Classroom ---
         left_column_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
         left_column_frame.grid(row=0, column=0, padx=(0,10), pady=0, sticky="nsew")
 
-        ctk.CTkLabel(left_column_frame, text="Clases Existentes", font=HEADING_FONT).pack(pady=(10,5), padx=10)
+        ctk.CTkLabel(left_column_frame, text="Clases Existentes", font=HEADING_FONT).pack(pady=(15,10), padx=10) # HEADING_FONT, Adjusted pady
 
         self.classrooms_list_frame = ctk.CTkScrollableFrame(left_column_frame, corner_radius=6)
         self.classrooms_list_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
@@ -1422,13 +1428,13 @@ class App(ctk.CTk):
         rename_frame = ctk.CTkFrame(right_column_frame, fg_color="transparent")
         rename_frame.pack(pady=20, padx=20, fill="x")
 
-        ctk.CTkLabel(rename_frame, text="Renombrar Clase Seleccionada", font=HEADING_FONT).pack(pady=(0,15))
+        ctk.CTkLabel(rename_frame, text="Renombrar Clase Seleccionada", font=HEADING_FONT).pack(pady=(0,20)) # HEADING_FONT, Adjusted pady
 
-        ctk.CTkLabel(rename_frame, text="Nuevo Nombre para la Clase:", font=BODY_FONT).pack(anchor="w") # Translated
-        self.rename_classroom_entry = ctk.CTkEntry(rename_frame, font=BODY_FONT, placeholder_text="Escribe el nuevo nombre aquí", state="disabled") # Translated
-        self.rename_classroom_entry.pack(fill="x", pady=(0,10))
+        ctk.CTkLabel(rename_frame, text="Nuevo Nombre para la Clase:", font=BODY_FONT).pack(anchor="w", pady=(0,5)) # BODY_FONT, pady adjusted
+        self.rename_classroom_entry = ctk.CTkEntry(rename_frame, font=BODY_FONT, placeholder_text="Escribe el nuevo nombre aquí", state="disabled") # Ensured BODY_FONT
+        self.rename_classroom_entry.pack(fill="x", pady=(0,15)) # pady adjusted
 
-        self.rename_classroom_button = ctk.CTkButton(rename_frame, text="Guardar Nuevo Nombre", font=BUTTON_FONT, command=self.rename_classroom_ui, state="disabled", corner_radius=8) # Translated
+        self.rename_classroom_button = ctk.CTkButton(rename_frame, text="Guardar Nuevo Nombre", font=BUTTON_FONT, command=self.rename_classroom_ui, state="disabled", corner_radius=8) # Ensured BUTTON_FONT and corner_radius
         self.rename_classroom_button.pack(fill="x", pady=10)
 
         self.refresh_classroom_management_list()
@@ -1610,11 +1616,11 @@ class App(ctk.CTk):
        controls_frame = ctk.CTkFrame(tab, corner_radius=10)
        controls_frame.pack(pady=10, padx=10, fill="x")
 
-       ctk.CTkLabel(controls_frame, text="Ver:", font=BODY_FONT).pack(side="left", padx=(10,5), pady=10)
+       ctk.CTkLabel(controls_frame, text="Ver:", font=BODY_FONT).pack(side="left", padx=(10,5), pady=10) # BODY_FONT applied
 
        self.leaderboard_filter_type_combo = ctk.CTkSegmentedButton(controls_frame,
                                                                   values=["🏆 Global", "🏫 Por Clase"],
-                                                                  font=BUTTON_FONT,
+                                                                  font=BUTTON_FONT, # BUTTON_FONT (global)
                                                                   # command will be added later
                                                                   )
        self.leaderboard_filter_type_combo.pack(side="left", padx=5, pady=10)
@@ -1622,23 +1628,23 @@ class App(ctk.CTk):
 
        self.leaderboard_class_filter_combo = ctk.CTkComboBox(controls_frame,
                                                                values=[], # To be populated later
-                                                               font=BODY_FONT,
-                                                               dropdown_font=BODY_FONT,
+                                                               font=BODY_FONT, # BODY_FONT applied
+                                                               dropdown_font=BODY_FONT, # BODY_FONT applied
                                                                state="disabled", # Enabled when "Por Clase" is selected
                                                                # command will be added later
                                                                )
        self.leaderboard_class_filter_combo.pack(side="left", padx=5, pady=10)
 
-       refresh_icon = self.load_icon("refresh") # Assumes you have a refresh icon
+       refresh_icon = self.load_icon("refresh")
        self.leaderboard_refresh_button = ctk.CTkButton(controls_frame, text="Refrescar",
-                                                      image=refresh_icon, font=BUTTON_FONT,
+                                                      image=refresh_icon, font=BUTTON_FONT, # BUTTON_FONT applied
                                                       # command will be added later
-                                                      width=100, corner_radius=8)
+                                                      width=120, corner_radius=8) # Increased width
        self.leaderboard_refresh_button.pack(side="right", padx=10, pady=10)
 
        # --- Leaderboard Display Area ---
        self.leaderboard_scroll_frame = ctk.CTkScrollableFrame(tab, label_text="Tabla de Clasificación",
-                                                              label_font=HEADING_FONT, corner_radius=10)
+                                                              label_font=HEADING_FONT, corner_radius=10) # HEADING_FONT applied
        self.leaderboard_scroll_frame.pack(expand=True, fill="both", padx=10, pady=(0,10))
 
        # Configure commands for filters
@@ -1696,39 +1702,64 @@ class App(ctk.CTk):
 
         if not students_data:
             no_data_label = ctk.CTkLabel(self.leaderboard_scroll_frame, text="No hay datos para mostrar.", font=BODY_FONT)
-            no_data_label.pack(pady=20)
+            no_data_label.pack(pady=30, padx=10)
             return
 
-        entry_icon = self.load_icon("students") # Generic icon for entries
+        entry_icon = self.load_icon("students", size=(24,24))
+
+        gold_color = ("#FFD700", "#B8860B")    # Updated Gold
+        silver_color = ("#E0E0E0", "#A0A0A0")  # Updated Silver
+        bronze_color = ("#CD7F32", "#8C581E")  # Updated Bronze
+        default_item_color = ("#FFFFFF", "#2B2B2B") # Verified: Remains as specified
 
         for i, student in enumerate(students_data):
             rank = i + 1
 
-            item_frame = ctk.CTkFrame(self.leaderboard_scroll_frame, corner_radius=6, border_width=1, border_color=("gray80", "gray30"))
-            item_frame.pack(fill="x", pady=(5,0), padx=5)
+            item_bg_color = default_item_color
+            name_font_size_increase = 0
+            rank_font_size = 18
 
-            rank_label = ctk.CTkLabel(item_frame, text=f"#{rank}", font=(APP_FONT_FAMILY, 16, "bold"))
-            rank_label.pack(side="left", padx=10, pady=10)
+            if rank == 1:
+                item_bg_color = gold_color
+                name_font_size_increase = 2
+                rank_font_size = 20
+            elif rank == 2:
+                item_bg_color = silver_color
+            elif rank == 3:
+                item_bg_color = bronze_color
+            # else: # For alternating row colors if desired for ranks > 3
+                # if i % 2 == 0:
+                #     item_bg_color = ("#F0F0F0", "#303030")
+                # else:
+                #     item_bg_color = default_item_color # Or another color for odd rows
 
-            if entry_icon: # Add small icon if loaded
+            item_frame = ctk.CTkFrame(self.leaderboard_scroll_frame, corner_radius=6, border_width=1, border_color=("gray70", "gray40"), fg_color=item_bg_color) # border_color adjusted slightly
+            item_frame.pack(fill="x", pady=8, padx=10)
+
+            rank_label = ctk.CTkLabel(item_frame, text=f"#{rank}", font=(APP_FONT_FAMILY, rank_font_size, "bold"))
+            rank_label.pack(side="left", padx=(10,15), pady=10)
+
+            if entry_icon:
                 icon_label = ctk.CTkLabel(item_frame, image=entry_icon, text="")
                 icon_label.pack(side="left", padx=(0,10), pady=10)
 
-            details_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
-            details_frame.pack(side="left", padx=10, pady=5, expand=True, fill="x")
+            details_frame = ctk.CTkFrame(item_frame, fg_color="transparent") # Transparent to show item_frame color
+            details_frame.pack(side="left", padx=10, pady=(8,8), expand=True, fill="x")
 
             name_text = student.get('name', 'N/A')
             points_text = student.get('points', 0)
             classroom_text = student.get('classroom', 'N/A')
 
-            name_label = ctk.CTkLabel(details_frame, text=name_text, font=(APP_FONT_FAMILY, 14, "bold"), anchor="w")
-            name_label.pack(fill="x")
+            base_name_font_size = 16
+            name_label_font = (APP_FONT_FAMILY, base_name_font_size + name_font_size_increase, "bold")
+            name_label = ctk.CTkLabel(details_frame, text=name_text, font=name_label_font, anchor="w")
+            name_label.pack(fill="x", pady=(0,2))
 
             points_label_text = f"{points_text} Puntos"
-            if filter_type == "🏆 Global": # Only show classroom in global view
+            if filter_type == "🏆 Global":
                 points_label_text += f"  |  Clase: {classroom_text}"
 
-            points_label = ctk.CTkLabel(details_frame, text=points_label_text, font=(APP_FONT_FAMILY, 11), anchor="w")
+            points_label = ctk.CTkLabel(details_frame, text=points_label_text, font=BODY_FONT, anchor="w")
             points_label.pack(fill="x")
 
     # def um_toggle_password_visibility(self): # Optional helper
