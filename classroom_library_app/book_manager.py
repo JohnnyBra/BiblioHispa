@@ -6,10 +6,12 @@ import student_manager
 import os
 # Assuming utils.py is in the same directory level (classroom_library_app/)
 from utils import get_data_path
+
 # DB_PATH_FOR_CODE is the relative path string that get_data_path will use.
 # It should point to where the database is expected to be within the application's
 # data structure (e.g., "database/library.db").
 DB_PATH_FOR_CODE = os.path.join("database", "library.db")
+
 # The actual path used by sqlite3.connect will be resolved by get_data_path(DB_PATH_FOR_CODE)
 def _get_resolved_db_path():
     # This helper ensures the database directory exists, especially for dev.
@@ -17,9 +19,11 @@ def _get_resolved_db_path():
     path = get_data_path(DB_PATH_FOR_CODE)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     return path
+
 def generate_id():
     """Generates a unique ID for a book."""
     return str(uuid.uuid4())
+
 def add_book_db(titulo, autor, ubicacion, genero=None, cantidad_total=1): # Added genero, cantidad_total, changed others
     """Adds a new book to the database.
     Returns the new book's ID or None on failure."""
@@ -39,6 +43,7 @@ def add_book_db(titulo, autor, ubicacion, genero=None, cantidad_total=1): # Adde
     finally:
         if conn:
             conn.close()
+
 def get_all_books_db(ubicacion_filter=None): # Changed classroom_filter to ubicacion_filter, removed status_filter
     """Queries the books table, applying optional filters for ubicacion.
     Returns a list of dictionaries (each dict representing a book)."""
@@ -60,6 +65,32 @@ def get_all_books_db(ubicacion_filter=None): # Changed classroom_filter to ubica
     finally:
         if conn:
             conn.close()
+
+def get_book_by_id_db(book_id):
+    """Fetches a specific book by its ID from the database.
+    Returns a dictionary representing the book if found, else None."""
+    conn = None
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        conn.row_factory = sqlite3.Row  # Access columns by name
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, titulo, autor, genero, ubicacion, cantidad_total
+            FROM books
+            WHERE id = ?
+        """, (book_id,))
+        book_row = cursor.fetchone()
+        if book_row:
+            return dict(book_row)
+        else:
+            return None
+    except sqlite3.Error as e:
+        print(f"Database error in get_book_by_id_db for book_id {book_id}: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
 def import_books_from_csv_db(file_path):
     """Reads a CSV file and adds books to the database.
     Expected headers: Título, Autor, Género, Ubicación, Cantidad_Total.
@@ -143,6 +174,7 @@ def import_books_from_csv_db(file_path):
     except Exception as e:
         error_messages.append(f"Ocurrió un error inesperado durante la importación del CSV: {e}")
     return successful_imports, error_messages
+
 def search_books_db(query, search_field="titulo"): # default to 'titulo'
     """Searches books where search_field CONTAINS query (case-insensitive).
     Returns a list of book dictionaries."""
@@ -167,6 +199,7 @@ def search_books_db(query, search_field="titulo"): # default to 'titulo'
     finally:
         if conn:
             conn.close()
+
 # --- Loan Management Functions ---
 def get_available_book_count(book_id):
     """Calculates the number of available copies for a given book_id."""
@@ -192,6 +225,7 @@ def get_available_book_count(book_id):
     finally:
         if conn:
             conn.close()
+
 def loan_book_db(book_id, student_id, due_date_str, lending_student_leader_id):
     """Records a book loan in the 'loans' table."""
     if not student_manager.is_student_leader(lending_student_leader_id):
@@ -241,6 +275,7 @@ def loan_book_db(book_id, student_id, due_date_str, lending_student_leader_id):
     finally:
         if conn:
             conn.close()
+
 def return_book_db(loan_id, student_leader_id, worksheet_submitted=False):
     """Removes a loan record from the 'loans' table upon book return and applies gamification points."""
     if not student_manager.is_student_leader(student_leader_id):
@@ -308,6 +343,7 @@ def return_book_db(loan_id, student_leader_id, worksheet_submitted=False):
     finally:
         if conn:
             conn.close()
+
 def get_current_loans_db(student_id_filter=None, ubicacion_filter=None):
     """Fetches current loans, joining with books and students tables.
     Filters by student_id (exact match) and/or books.ubicacion (exact match).
@@ -345,6 +381,7 @@ def get_current_loans_db(student_id_filter=None, ubicacion_filter=None):
     finally:
         if conn:
             conn.close()
+
 def get_books_due_soon_db(days_threshold=7, ubicacion_filter=None):
     """Fetches loans due within days_threshold or already overdue.
     Joins with books and students. Filters by books.ubicacion.
@@ -378,6 +415,7 @@ def get_books_due_soon_db(days_threshold=7, ubicacion_filter=None):
     finally:
         if conn:
             conn.close()
+
 def extend_loan_db(loan_id, days_to_extend=14):
     conn = None  # Initialize conn to None for the finally block
     try:
@@ -416,11 +454,13 @@ def extend_loan_db(loan_id, days_to_extend=14):
     finally:
         if conn:
             conn.close()
+
 if __name__ == '__main__':
     # Example Usage (for testing purposes)
     # First, ensure database and table are created by running db_setup.py or main.py
     # from database.db_setup import init_db
     # init_db() # Make sure db is initialized
+
     # Test adding a book
     print("Attempting to add a book...")
     # new_id = add_book_db("El Principito", "Antoine de Saint-Exupéry", "Salón A", "Fábula", 5)
@@ -428,6 +468,7 @@ if __name__ == '__main__':
     #     print(f"Libro añadido con ID: {new_id}")
     # else:
     #     print("Error al añadir libro.")
+
     # Test getting all books
     print("\nObteniendo todos los libros:")
     all_books = get_all_books_db()
@@ -436,6 +477,7 @@ if __name__ == '__main__':
             print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}, Cantidad: {book['cantidad_total']}")
     else:
         print("No se encontraron libros o ocurrió un error.")
+
     # Test getting books for a specific ubicacion
     print("\nObteniendo libros para Salón A:")
     salon_a_books = get_all_books_db(ubicacion_filter="Salón A")
@@ -444,6 +486,7 @@ if __name__ == '__main__':
             print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}")
     else:
         print("No se encontraron libros para Salón A.")
+
     # Test searching books
     print("\nBuscando libros con 'Principito' en título:")
     cat_books = search_books_db("Principito", "titulo")
@@ -452,13 +495,16 @@ if __name__ == '__main__':
             print(f"  Encontrado: {book['titulo']} por {book['autor']}")
     else:
         print("No se encontraron libros con 'Principito' en el título.")
+
     # Loan management functions below this point are not yet updated for the new schema
     # and will likely not work correctly. They are preserved as placeholders for future refactoring.
     # ... (original __main__ content for loan tests would be here, but needs significant changes) ...
+
     # Example Usage (for testing purposes)
     # First, ensure database and table are created by running db_setup.py or main.py
     # from database.db_setup import init_db
     # init_db() # Make sure db is initialized
+
     # Test adding a book
     print("Attempting to add a book...")
     # new_id = add_book_db("El Principito", "Antoine de Saint-Exupéry", "Salón A", "Fábula", 5)
@@ -466,6 +512,7 @@ if __name__ == '__main__':
     #     print(f"Libro añadido con ID: {new_id}")
     # else:
     #     print("Error al añadir libro.")
+
     # Test getting all books
     print("\nObteniendo todos los libros:")
     all_books = get_all_books_db()
@@ -474,6 +521,7 @@ if __name__ == '__main__':
             print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}, Cantidad: {book['cantidad_total']}")
     else:
         print("No se encontraron libros o ocurrió un error.")
+
     # Test getting books for a specific ubicacion
     print("\nObteniendo libros para Salón A:")
     salon_a_books = get_all_books_db(ubicacion_filter="Salón A")
@@ -482,6 +530,7 @@ if __name__ == '__main__':
             print(f"  Título: {book['titulo']}, Autor: {book['autor']}, Ubicación: {book['ubicacion']}")
     else:
         print("No se encontraron libros para Salón A.")
+
     # Test searching books
     print("\nBuscando libros con 'Principito' en título:")
     cat_books = search_books_db("Principito", "titulo")
@@ -490,45 +539,55 @@ if __name__ == '__main__':
             print(f"  Encontrado: {book['titulo']} por {book['autor']}")
     else:
         print("No se encontraron libros con 'Principito' en el título.")
+
     # Loan management functions below this point are not yet updated for the new schema
     # and will likely not work correctly. They are preserved as placeholders for future refactoring.
     # ... (original __main__ content for loan tests would be here, but needs significant changes) ...
+
     print("\n--- Testing get_current_loans_db with filters ---")
     # To test this properly, we would need to:
     # 1. Ensure some students exist (student_manager.add_student_db)
     # 2. Ensure some books exist (add_book_db)
     # 3. Create some loans (loan_book_db)
+
     # Example (conceptual, actual IDs would vary):
     # student_id_for_filter_test = student_manager.add_student_db("LoanFilterTester", "TestClass", "testpass")
     # book_id_for_loan_test1 = add_book_db("Loan Test Book 1", "Author", "TestClass", cantidad_total=1)
     # book_id_for_loan_test2 = add_book_db("Loan Test Book 2", "Author", "AnotherClass", cantidad_total=1)
+
     # if student_id_for_filter_test and book_id_for_loan_test1 and book_id_for_loan_test2:
     #     print(f"Test student ID: {student_id_for_filter_test}")
     #     # Loan one book to this student in TestClass
     #     loan_book_db(book_id_for_loan_test1, student_id_for_filter_test, "2024-12-31", "some_leader_id_if_needed_by_loan_book")
+
     #     # Loan another book (in AnotherClass) to a different student (or same, if logic allows)
     #     # For simplicity, let's assume another student exists or we add one
     #     other_student_id = student_manager.add_student_db("OtherLoanTester", "AnotherClass", "testpass")
     #     if other_student_id:
     #         loan_book_db(book_id_for_loan_test2, other_student_id, "2024-12-31", "some_leader_id")
+
     #     print("\nLoans for specific student:")
     #     loans_student_specific = get_current_loans_db(student_id_filter=student_id_for_filter_test)
     #     for loan in loans_student_specific:
     #         print(f"  Loan ID: {loan['loan_id']}, Book: {loan['titulo']}, Borrower: {loan['borrower_name']}")
     #     print(f"  Count: {len(loans_student_specific)}")
+
     #     print("\nLoans for specific ubicacion ('TestClass'):")
     #     loans_ubicacion_specific = get_current_loans_db(ubicacion_filter="TestClass")
     #     for loan in loans_ubicacion_specific:
     #         print(f"  Loan ID: {loan['loan_id']}, Book: {loan['titulo']}, Ubicacion: {loan['ubicacion']}")
     #     print(f"  Count: {len(loans_ubicacion_specific)}")
+
     #     print("\nLoans for specific student AND ubicacion:")
     #     loans_both_filters = get_current_loans_db(student_id_filter=student_id_for_filter_test, ubicacion_filter="TestClass")
     #     for loan in loans_both_filters:
     #         print(f"  Loan ID: {loan['loan_id']}, Book: {loan['titulo']}, Student: {loan['borrower_name']}, Ubicacion: {loan['ubicacion']}")
     #     print(f"  Count: {len(loans_both_filters)}")
+
     #     print("\nAll current loans (no filters):")
     #     all_loans_for_test = get_current_loans_db()
     #     print(f"  Total loans: {len(all_loans_for_test)}")
     # else:
     #     print("Could not create test students/books for loan filter tests.")
+
     pass # Keep the if __name__ == '__main__': block for future direct script testing if needed
