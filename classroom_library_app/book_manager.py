@@ -92,70 +92,78 @@ def get_book_by_id_db(book_id):
             conn.close()
 
 def import_books_from_csv_db(file_path):
-    """Reads a CSV file and adds books to the database.
+    """Reads a CSV file and adds books to the database using batch processing.
     Expected headers: Título, Autor, Género, Ubicación, Cantidad_Total.
     Returns a tuple: (successful_imports_count, error_messages_list)."""
     successful_imports = 0
     error_messages = []
+    books_to_insert = []
+    conn = None
+
     try:
+        # Fetch valid locations first (outside transaction, as it reads DB)
+        try:
+            distinct_classrooms = student_manager.get_distinct_classrooms()
+        except Exception as e_sm:
+            error_messages.append(f"Error crítico al obtener clases existentes: {e_sm}. No se puede continuar con la importación.")
+            return 0, error_messages
+
+        fixed_locations = ["Biblioteca"]
+        valid_locations = set(distinct_classrooms + fixed_locations)
+        if not valid_locations and "Biblioteca" not in fixed_locations : # Corrected logic
+             error_messages.append("No se pudieron determinar ubicaciones válidas (clases o Biblioteca). La importación no puede continuar sin ubicaciones válidas.")
+             return 0, error_messages
+
         with open(file_path, mode='r', encoding='utf-8-sig') as file:
             reader = csv.DictReader(file)
-            # Fetch valid locations
-            try:
-                distinct_classrooms = student_manager.get_distinct_classrooms()
-            except Exception as e_sm: # Catch potential errors from student_manager call
-                error_messages.append(f"Error al obtener clases existentes: {e_sm}")
-                return successful_imports, error_messages # Stop if we cant get classrooms
-            fixed_locations = ["Biblioteca"] # Predefined valid locations
-            valid_locations = set(distinct_classrooms + fixed_locations)
-            if not valid_locations and "Biblioteca" not in fixed_locations:
-                 error_messages.append("No se pudieron determinar ubicaciones válidas (clases o Biblioteca).")
-                 return successful_imports, error_messages
             actual_headers_raw = reader.fieldnames
             if not actual_headers_raw:
                 error_messages.append("El archivo CSV está vacío o no tiene encabezados.")
-                return successful_imports, error_messages
-            # Normalize actual headers (strip spaces, convert to lowercase for matching)
+                return 0, error_messages
+
             actual_headers_normalized_map = {h.strip().lower(): h.strip() for h in actual_headers_raw}
-            # Define canonical field names (lowercase) and their aliases (lowercase)
             expected_fields_with_aliases = {
-                "título": ["título", "titulo"],
-                "autor": ["autor"],
+                "título": ["título", "titulo"], "autor": ["autor"],
                 "género": ["género", "genero", "género literario", "genero literario"],
                 "ubicación": ["ubicación", "ubicacion", "clase"],
                 "cantidad_total": ["cantidad_total", "cantidad total", "cantidad", "cantidad de ejemplares", "cantidad de ejemplares vistos", "num ejemplares", "no. ejemplares"]
             }
             found_header_map = {}
             missing_canonical_headers = []
+
             for canonical, aliases in expected_fields_with_aliases.items():
                 found_alias = False
                 for alias in aliases:
                     if alias in actual_headers_normalized_map:
-                        found_header_map[canonical] = actual_headers_normalized_map[alias] # Store the original casing from CSV
+                        found_header_map[canonical] = actual_headers_normalized_map[alias]
                         found_alias = True
                         break
                 if not found_alias:
                     missing_canonical_headers.append(canonical.capitalize())
+
             if missing_canonical_headers:
                 error_messages.append(
                     f"El archivo CSV no contiene los encabezados requeridos o sus variantes aceptadas: {', '.join(missing_canonical_headers)}. "
-                    f"Asegúrese de que el archivo tenga columnas correspondientes a Título, Autor, Género, Ubicación, Cantidad Total. "
-                    f"Encabezados encontrados en el CSV: {', '.join(actual_headers_raw)}"
+                    f"Encabezados encontrados: {', '.join(actual_headers_raw)}"
                 )
-                return successful_imports, error_messages
+                return 0, error_messages
+
             for row_num, row in enumerate(reader, start=2):
                 titulo = row.get(found_header_map["título"])
                 autor = row.get(found_header_map["autor"])
-                ubicacion = row.get(found_header_map["ubicación"])
+                ubicacion_raw = row.get(found_header_map["ubicación"])
                 cantidad_total_str = row.get(found_header_map["cantidad_total"])
                 genero = row.get(found_header_map["género"])
-                # Validate Ubicación
-                if ubicacion and ubicacion.strip() not in valid_locations:
-                    error_messages.append(f"Fila {row_num}: La ubicación '{ubicacion.strip()}' no es válida. Debe ser una clase existente o 'Biblioteca'. Saltando fila.")
-                    continue # Skip this row
-                if not titulo or not autor or not ubicacion or not cantidad_total_str or not genero:
+
+                if not all([titulo, autor, ubicacion_raw, cantidad_total_str, genero]): # Check all required fields
                     error_messages.append(f"Fila {row_num}: Faltan campos requeridos (Título, Autor, Género, Ubicación, Cantidad_Total). Saltando fila.")
                     continue
+
+                ubicacion = ubicacion_raw.strip()
+                if ubicacion not in valid_locations:
+                    error_messages.append(f"Fila {row_num}: La ubicación '{ubicacion}' no es válida. Debe ser una clase existente o 'Biblioteca'. Saltando fila.")
+                    continue
+
                 try:
                     cantidad_total_int = int(cantidad_total_str)
                     if cantidad_total_int <= 0:
@@ -164,15 +172,41 @@ def import_books_from_csv_db(file_path):
                 except ValueError:
                     error_messages.append(f"Fila {row_num}: 'Cantidad_Total' ({cantidad_total_str}) no es un número válido. Usando 1 por defecto.")
                     cantidad_total_int = 1
-                book_id = add_book_db(titulo, autor, ubicacion, genero, cantidad_total_int)
-                if book_id:
-                    successful_imports += 1
-                else:
-                    error_messages.append(f"Fila {row_num}: Error al añadir libro '{titulo}' por '{autor}' a la base de datos.")
+
+                book_id = generate_id() # Generate ID here
+                books_to_insert.append((book_id, titulo, autor, genero, ubicacion, cantidad_total_int))
+
+        if not books_to_insert:
+            if not error_messages: # No books to insert and no errors means empty valid CSV or all rows skipped
+                 error_messages.append("No se encontraron libros válidos para importar en el archivo CSV.")
+            return 0, error_messages # Return early if no books were prepared
+
+        conn = sqlite3.connect(_get_resolved_db_path())
+        cursor = conn.cursor()
+        conn.execute("BEGIN TRANSACTION;")
+
+        try:
+            cursor.executemany("""
+                INSERT INTO books (id, titulo, autor, genero, ubicacion, cantidad_total)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, books_to_insert)
+            conn.commit()
+            successful_imports = len(books_to_insert)
+        except sqlite3.Error as e:
+            conn.rollback()
+            error_messages.append(f"Error de base de datos durante la inserción en lote: {e}. No se importaron libros en este lote.")
+            return 0, error_messages # Return 0 successful imports for this batch on DB error
+
     except FileNotFoundError:
         error_messages.append(f"Error: No se encontró el archivo '{file_path}'.")
     except Exception as e:
         error_messages.append(f"Ocurrió un error inesperado durante la importación del CSV: {e}")
+        if conn: # If connection was established before this generic error
+            conn.rollback() # Rollback any potential transaction
+    finally:
+        if conn:
+            conn.close()
+
     return successful_imports, error_messages
 
 def search_books_db(query, search_field="titulo"): # default to 'titulo'
@@ -202,26 +236,34 @@ def search_books_db(query, search_field="titulo"): # default to 'titulo'
 
 # --- Loan Management Functions ---
 def get_available_book_count(book_id):
-    """Calculates the number of available copies for a given book_id."""
-    conn = None  # Ensure conn is defined in the outer scope for finally block
+    """Calculates the number of available copies for a given book_id using a single optimized query."""
+    conn = None
     try:
         conn = sqlite3.connect(_get_resolved_db_path())
         cursor = conn.cursor()
-        # Fetch total quantity of the book
-        cursor.execute("SELECT cantidad_total FROM books WHERE id = ?", (book_id,))
-        book_result = cursor.fetchone()
-        if not book_result:
-            print(f"Error: Book with ID {book_id} not found.")
+        query = """
+            SELECT b.cantidad_total - COALESCE(l.active_loans, 0) AS available_count
+            FROM books b
+            LEFT JOIN (
+                SELECT book_id, COUNT(*) AS active_loans
+                FROM loans
+                GROUP BY book_id
+            ) l ON b.id = l.book_id
+            WHERE b.id = ?;
+        """
+        cursor.execute(query, (book_id,))
+        result = cursor.fetchone()
+
+        if result:
+            return result[0] if result[0] > 0 else 0
+        else:
+            # This means the book_id was not found in the books table
+            print(f"Info: Book with ID {book_id} not found for available count.")
             return 0
-        cantidad_total = book_result[0]
-        # Count active loans for the book
-        cursor.execute("SELECT COUNT(*) FROM loans WHERE book_id = ?", (book_id,))
-        active_loans_count = cursor.fetchone()[0]
-        available_count = cantidad_total - active_loans_count
-        return available_count if available_count > 0 else 0
+
     except sqlite3.Error as e:
         print(f"Database error in get_available_book_count for book_id {book_id}: {e}")
-        return 0
+        return 0 # Return 0 on error as a safe default
     finally:
         if conn:
             conn.close()

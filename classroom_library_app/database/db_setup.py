@@ -145,6 +145,18 @@ def init_db():
         else:
             print(f"Default admin user 'admin' already exists. Skipping default admin creation.")
 
+        # Add Indexes
+        print("Creating database indexes...")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_loans_book_id ON loans (book_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_loans_student_id ON loans (student_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_loans_due_date ON loans (due_date)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_books_ubicacion ON books (ubicacion)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_classroom ON students (classroom)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_books_titulo ON books (titulo)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_books_autor ON books (autor)")
+        conn.commit()
+        print("Database indexes created successfully.")
+
     except sqlite3.Error as e:
         print(f"Database error during init_db: {e}")
     finally:
