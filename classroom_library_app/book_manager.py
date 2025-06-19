@@ -497,6 +497,80 @@ def extend_loan_db(loan_id, days_to_extend=14):
         if conn:
             conn.close()
 
+def get_most_read_books_db(limit=10):
+    """Fetches the most loaned books from the database.
+    Returns a list of book dictionaries, ordered by loan count."""
+    conn = None
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        query = """
+            SELECT b.id, b.titulo, b.autor, b.genero, b.ubicacion, b.cantidad_total, COUNT(l.book_id) as loan_count
+            FROM books b
+            JOIN loans l ON b.id = l.book_id
+            GROUP BY l.book_id
+            ORDER BY loan_count DESC
+            LIMIT ?;
+        """
+        cursor.execute(query, (limit,))
+        books = [dict(row) for row in cursor.fetchall()]
+        return books
+    except sqlite3.Error as e:
+        print(f"Database error in get_most_read_books_db: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+def get_new_releases_db(limit=10):
+    """Fetches a list of new releases (currently random books) from the database.
+    Returns a list of book dictionaries."""
+    conn = None
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        query = """
+            SELECT id, titulo, autor, genero, ubicacion, cantidad_total, date_added
+            FROM books
+            ORDER BY date_added DESC
+            LIMIT ?;
+        """
+        cursor.execute(query, (limit,))
+        books = [dict(row) for row in cursor.fetchall()]
+        return books
+    except sqlite3.Error as e:
+        print(f"Database error in get_new_releases_db: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+def get_recommendations_db(limit=10):
+    """Fetches a list of recommended books (currently random books) from the database.
+    Returns a list of book dictionaries."""
+    conn = None
+    try:
+        conn = sqlite3.connect(_get_resolved_db_path())
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        query = """
+            SELECT id, titulo, autor, genero, ubicacion, cantidad_total
+            FROM books
+            ORDER BY RANDOM()
+            LIMIT ?;
+        """
+        cursor.execute(query, (limit,))
+        books = [dict(row) for row in cursor.fetchall()]
+        return books
+    except sqlite3.Error as e:
+        print(f"Database error in get_recommendations_db: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
 if __name__ == '__main__':
     # Example Usage (for testing purposes)
     # First, ensure database and table are created by running db_setup.py or main.py

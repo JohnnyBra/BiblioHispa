@@ -83,7 +83,20 @@ def init_db():
             )
         """)
 
-        conn.commit()
+        # Add date_added column to books table
+        try:
+            cursor.execute("ALTER TABLE books ADD COLUMN date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+            conn.commit() # Commit after successful alteration
+            print("Column 'date_added' added to 'books' table with DEFAULT CURRENT_TIMESTAMP.")
+        except sqlite3.OperationalError as e:
+            if 'duplicate column name' in str(e).lower():
+                print("Column 'date_added' already exists in 'books'. Skipping.")
+            else:
+                # For other operational errors, re-raise or handle as appropriate
+                print(f"An unexpected OperationalError occurred when adding 'date_added' column: {e}")
+                # Depending on policy, you might want to re-raise e here
+
+        conn.commit() # Commit other table creations before this was moved here. This commit might be redundant if the one above executed.
         print("Database schema initialized successfully. Books and Students tables are ready.")
 
         # Add gamification columns with error handling for existing columns
