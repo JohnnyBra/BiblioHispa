@@ -252,6 +252,11 @@ class App(ctk.CTk):
         self.tab_view = ctk.CTkTabview(self)
         self.tab_view.pack(expand=True, fill="both", padx=15, pady=(5, 15)) # Adjusted top pady for tab_view
 
+        # Home tab
+        self.home_tab = self.tab_view.add("🏠 Inicio")
+        if hasattr(self, 'setup_home_tab'):
+            self.setup_home_tab()
+
         # Pestaña de Clasificación primero
         self.leaderboard_tab = self.tab_view.add("🏆 Clasificación")
         if hasattr(self, 'setup_leaderboard_tab'): # Verificar si el método existe
@@ -289,10 +294,82 @@ class App(ctk.CTk):
             # self.manage_classrooms_tab = None # Ensure it's None if user is not admin
 
         # Asegurar que la pestaña de Clasificación esté activa
-        self.tab_view.set("🏆 Clasificación")
+        self.tab_view.set("🏠 Inicio")
 
         # Deiconify (show) the main window now that UI is initialized
         self.deiconify()
+
+    def setup_home_tab(self):
+        tab = self.home_tab
+
+        home_scroll_frame = ctk.CTkScrollableFrame(tab, fg_color="transparent")
+        home_scroll_frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        def create_book_card(parent_frame, book_data):
+            card = ctk.CTkFrame(parent_frame, width=150, height=120, corner_radius=8, border_width=1) # Fixed size for consistency
+            card.pack(side="left", padx=5, pady=5)
+            card.pack_propagate(False) # Prevent children from resizing the card
+
+            title_label = ctk.CTkLabel(card, text=book_data.get('titulo', 'N/A'), font=(APP_FONT_FAMILY, 13, "bold"), wraplength=140)
+            title_label.pack(pady=(5,2), padx=5)
+
+            author_label = ctk.CTkLabel(card, text=f"Autor: {book_data.get('autor', 'N/A')}", font=(APP_FONT_FAMILY, 11), wraplength=140)
+            author_label.pack(pady=(0,5), padx=5)
+            return card
+
+        # "Los más leídos" (Most Read) Section
+        most_read_section_frame = ctk.CTkFrame(home_scroll_frame, corner_radius=10)
+        most_read_section_frame.pack(pady=10, padx=10, fill="x")
+        ctk.CTkLabel(most_read_section_frame, text="📚 Los más leídos", font=HEADING_FONT).pack(anchor="w", padx=15, pady=(10, 5))
+        most_read_content_frame = ctk.CTkFrame(most_read_section_frame, fg_color="transparent")
+        most_read_content_frame.pack(expand=True, fill="x", padx=15, pady=(0, 10))
+
+        for widget in most_read_content_frame.winfo_children():
+            widget.destroy()
+        most_read_books = book_manager.get_most_read_books_db(limit=10)
+        if most_read_books:
+            h_scroll_frame_most_read = ctk.CTkScrollableFrame(most_read_content_frame, orientation="horizontal", height=140, fg_color="transparent")
+            h_scroll_frame_most_read.pack(expand=True, fill="x", pady=5)
+            for book in most_read_books:
+                create_book_card(h_scroll_frame_most_read, book)
+        else:
+            ctk.CTkLabel(most_read_content_frame, text="No hay libros populares por el momento.", font=BODY_FONT).pack(pady=10)
+
+        # "Novedades" (New Releases) Section
+        new_releases_section_frame = ctk.CTkFrame(home_scroll_frame, corner_radius=10)
+        new_releases_section_frame.pack(pady=10, padx=10, fill="x")
+        ctk.CTkLabel(new_releases_section_frame, text="✨ Novedades", font=HEADING_FONT).pack(anchor="w", padx=15, pady=(10, 5))
+        new_releases_content_frame = ctk.CTkFrame(new_releases_section_frame, fg_color="transparent")
+        new_releases_content_frame.pack(expand=True, fill="x", padx=15, pady=(0, 10))
+
+        for widget in new_releases_content_frame.winfo_children():
+            widget.destroy()
+        new_release_books = book_manager.get_new_releases_db(limit=10)
+        if new_release_books:
+            h_scroll_frame_new_releases = ctk.CTkScrollableFrame(new_releases_content_frame, orientation="horizontal", height=140, fg_color="transparent")
+            h_scroll_frame_new_releases.pack(expand=True, fill="x", pady=5)
+            for book in new_release_books:
+                create_book_card(h_scroll_frame_new_releases, book)
+        else:
+            ctk.CTkLabel(new_releases_content_frame, text="No hay novedades por el momento.", font=BODY_FONT).pack(pady=10)
+
+        # "Creemos que podría gustarte..." (Recommendations) Section
+        recommendations_section_frame = ctk.CTkFrame(home_scroll_frame, corner_radius=10)
+        recommendations_section_frame.pack(pady=10, padx=10, fill="x")
+        ctk.CTkLabel(recommendations_section_frame, text="🤔 Creemos que podría gustarte...", font=HEADING_FONT).pack(anchor="w", padx=15, pady=(10, 5))
+        recommendations_content_frame = ctk.CTkFrame(recommendations_section_frame, fg_color="transparent")
+        recommendations_content_frame.pack(expand=True, fill="x", padx=15, pady=(0, 10))
+
+        for widget in recommendations_content_frame.winfo_children():
+            widget.destroy()
+        recommended_books = book_manager.get_recommendations_db(limit=10)
+        if recommended_books:
+            h_scroll_frame_recommendations = ctk.CTkScrollableFrame(recommendations_content_frame, orientation="horizontal", height=140, fg_color="transparent")
+            h_scroll_frame_recommendations.pack(expand=True, fill="x", pady=5)
+            for book in recommended_books:
+                create_book_card(h_scroll_frame_recommendations, book)
+        else:
+            ctk.CTkLabel(recommendations_content_frame, text="No tenemos recomendaciones para ti en este momento.", font=BODY_FONT).pack(pady=10)
 
     def quit_application(self):
         # Perform any cleanup if necessary
